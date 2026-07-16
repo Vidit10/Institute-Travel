@@ -1,0 +1,12 @@
+{
+  "name": "Campus Travel — IIT Dharwad",
+  "short_name": "Campus Travel",
+  "description": "Campus travel, simplified — for IIT Dharwad.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#f9fafb",
+  "theme_color": "#2563eb",
+  "icons": [
+    { "src": "/icon.svg", "sizes": "any", "type": "image/svg+xml" }
+  ]
+}

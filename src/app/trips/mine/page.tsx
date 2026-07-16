@@ -1,0 +1,77 @@
+"use client";
+
+import { useEffect, useState } from "react";
+import Link from "next/link";
+import NavBar from "@/components/NavBar";
+
+type MyTrip = {
+  _id: string;
+  mode: string;
+  pickupLocation: string;
+  destination: string;
+  departureTime: string;
+  seatsRemaining: number;
+  totalCapacity: number;
+  status: string;
+  pendingRequestCount: number;
+};
+
+export default function MyTripsPage() {
+  const [trips, setTrips] = useState<MyTrip[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetch("/api/trips/mine")
+      .then((r) => r.json())
+      .then((data) => setTrips(data.trips || []))
+      .finally(() => setLoading(false));
+  }, []);
+
+  return (
+    <>
+      <NavBar />
+      <main className="mx-auto max-w-2xl px-4 py-6">
+        <h1 className="text-lg font-semibold">Trips you&apos;re hosting</h1>
+
+        {loading && <p className="mt-4 text-gray-400">Loading...</p>}
+        {!loading && trips.length === 0 && (
+          <p className="mt-4 text-gray-400">
+            You haven&apos;t listed a trip yet.{" "}
+            <Link href="/trips/new" className="text-brand-600 underline">
+              List one
+            </Link>
+            .
+          </p>
+        )}
+
+        <ul className="mt-4 space-y-3">
+          {trips.map((trip) => (
+            <li key={trip._id}>
+              <Link
+                href={`/trips/${trip._id}`}
+                className="block rounded-lg border border-gray-200 bg-white p-4 hover:border-brand-300"
+              >
+                <div className="flex items-center justify-between">
+                  <span className="text-sm font-medium uppercase text-brand-600">{trip.mode}</span>
+                  <span className="text-xs text-gray-400">{trip.status}</span>
+                </div>
+                <p className="mt-1 font-medium">
+                  {trip.pickupLocation} → {trip.destination}
+                </p>
+                <p className="text-sm text-gray-500">{new Date(trip.departureTime).toLocaleString()}</p>
+                <p className="mt-1 text-sm text-gray-400">
+                  {trip.seatsRemaining}/{trip.totalCapacity} seats left
+                  {trip.pendingRequestCount > 0 && (
+                    <span className="ml-2 rounded bg-brand-100 px-2 py-0.5 text-xs font-medium text-brand-700">
+                      {trip.pendingRequestCount} pending request{trip.pendingRequestCount > 1 ? "s" : ""}
+                    </span>
+                  )}
+                </p>
+              </Link>
+            </li>
+          ))}
+        </ul>
+      </main>
+    </>
+  );
+}
