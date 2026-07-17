@@ -130,3 +130,18 @@ Instrumented via PostHog (free tier). Baseline events to track from day one:
 
 - Exact enforcement point for girls-only visibility (hidden from feed entirely vs. visible-but-blocked).
 - Expiry window length for pending requests (fixed duration vs. tied to trip time).
+
+## 14. First-draft review revisions (post-launch-draft feedback)
+
+Superseding the relevant parts of sections 3, 6, 8, 9 above:
+
+- **Name and gender are locked after onboarding** — shown read-only in Settings, not editable. Year/program/phone remain editable.
+- **Program enum**: `UG`, `PG`, `PhD` (renamed from Masters/Doctoral). **Year depends on the selected program** (not a flat shared list): UG → 1st–5th year (`UG-1..5`), PG → 1st/2nd year (`PG-1/2`), PhD → `PhD-1..5` (labeled "PhD – Year N"); each also offers "Others". Choosing a different program resets the year selection since the old value may not be valid for the new list. See `src/lib/constants.ts` (`PROGRAMS`, `YEAR_OPTIONS_BY_PROGRAM`, `YEAR_LABELS`) for the single source of truth both onboarding and settings read from.
+- **Destination is fixed** to IIT Dharwad Hostels for V1 — no selector shown; Main Gate is dropped entirely.
+- **Vehicle is now a fixed dropdown**: Auto Rickshaw, Cab (5-seater), Cab (7-seater), Tum Tum — replacing free text. Each has a recommended-capacity estimate (comfort/luggage-based, not enforced) shown as a hint.
+- **Party size + companion invites**: host enters `numTravelers` (their own party size, including themselves) instead of manually subtracting from capacity. For `numTravelers - 1` additional people, the host provides their `@iitdh.ac.in` emails. An email matching an existing account is auto-linked (an accepted request, no separate approval step). An email with no account yet gets emailed an invite link; visiting it while signed in with a matching account claims the reserved seat. Seats are reserved from `numTravelers` at trip creation regardless of whether companions have accounts yet.
+- **Dynamic fare**: host enters a numeric `expectedFare` (required) instead of a free-text reference note. Per-person share (`expectedFare / current traveler count`) is shown live at creation and on the trip page, recalculating as riders are accepted.
+- **Pre-dated listings capped**: trips can only be created for departures within the next 72 hours (see `MAX_ADVANCE_HOURS`).
+- **Onboarding is now a two-step flow**: fill in → review summary → confirm. All fields mandatory, marked with `*`.
+- **Feedback is a native in-app page** (`/feedback`, stored in Mongo), not an external form link.
+- **Trip cancellation uses an in-app confirmation** (not the browser's native `confirm()`), with friendlier copy.

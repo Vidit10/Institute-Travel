@@ -33,11 +33,11 @@ export default function MyTripsPage() {
       <main className="mx-auto max-w-2xl px-4 py-6">
         <h1 className="text-lg font-semibold">Trips you&apos;re hosting</h1>
 
-        {loading && <p className="mt-4 text-gray-400">Loading...</p>}
+        {loading && <p className="mt-4 text-gray-500 dark:text-gray-400">Loading...</p>}
         {!loading && trips.length === 0 && (
-          <p className="mt-4 text-gray-400">
+          <p className="mt-4 text-gray-500 dark:text-gray-400">
             You haven&apos;t listed a trip yet.{" "}
-            <Link href="/trips/new" className="text-brand-600 underline">
+            <Link href="/trips/new" className="text-brand-600 underline dark:text-brand-500">
               List one
             </Link>
             .
@@ -49,20 +49,20 @@ export default function MyTripsPage() {
             <li key={trip._id}>
               <Link
                 href={`/trips/${trip._id}`}
-                className="block rounded-lg border border-gray-200 bg-white p-4 hover:border-brand-300"
+                className="block rounded-lg border border-gray-200 bg-white p-4 hover:border-brand-300 dark:border-gray-800 dark:bg-gray-900 dark:hover:border-brand-700"
               >
-                <div className="flex items-center justify-between">
-                  <span className="text-sm font-medium uppercase text-brand-600">{trip.mode}</span>
-                  <span className="text-xs text-gray-400">{trip.status}</span>
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <span className="text-sm font-medium uppercase text-brand-600 dark:text-brand-500">{trip.mode}</span>
+                  <span className="text-xs text-gray-500 dark:text-gray-400">{trip.status}</span>
                 </div>
-                <p className="mt-1 font-medium">
+                <p className="mt-1 break-words font-medium">
                   {trip.pickupLocation} → {trip.destination}
                 </p>
-                <p className="text-sm text-gray-500">{new Date(trip.departureTime).toLocaleString()}</p>
-                <p className="mt-1 text-sm text-gray-400">
+                <p className="text-sm text-gray-500 dark:text-gray-400">{new Date(trip.departureTime).toLocaleString()}</p>
+                <p className="mt-1 flex flex-wrap items-center gap-2 text-sm text-gray-500 dark:text-gray-400">
                   {trip.seatsRemaining}/{trip.totalCapacity} seats left
                   {trip.pendingRequestCount > 0 && (
-                    <span className="ml-2 rounded bg-brand-100 px-2 py-0.5 text-xs font-medium text-brand-700">
+                    <span className="rounded bg-brand-100 px-2 py-0.5 text-xs font-medium text-brand-700 dark:bg-brand-950 dark:text-brand-300">
                       {trip.pendingRequestCount} pending request{trip.pendingRequestCount > 1 ? "s" : ""}
                     </span>
                   )}

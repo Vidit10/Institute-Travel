@@ -5,15 +5,21 @@ import { authOptions } from "@/lib/auth";
 import { dbConnect } from "@/lib/mongodb";
 import { User } from "@/models/User";
 import { track } from "@/lib/analytics";
+import { PROGRAMS, YEARS, YEAR_OPTIONS_BY_PROGRAM } from "@/lib/constants";
 
-const onboardingSchema = z.object({
-  gender: z.enum(["female", "male", "other"]),
-  phone: z.string().min(7).max(15),
-  year: z.enum(["UG-1", "UG-2", "UG-3", "UG-4", "PG-1", "PG-2"]),
-  program: z.enum(["UG", "PG"]),
-  nonEssentialEmailOptIn: z.boolean(),
-  contactShareDefaultConsent: z.boolean(),
-});
+const onboardingSchema = z
+  .object({
+    gender: z.enum(["female", "male", "other"]),
+    phone: z.string().min(7).max(15),
+    year: z.enum(YEARS),
+    program: z.enum(PROGRAMS),
+    nonEssentialEmailOptIn: z.boolean(),
+    contactShareDefaultConsent: z.boolean(),
+  })
+  .refine((data) => (YEAR_OPTIONS_BY_PROGRAM[data.program] as readonly string[]).includes(data.year), {
+    message: "Year doesn't match the selected program",
+    path: ["year"],
+  });
 
 export async function POST(req: NextRequest) {
   const session = await getServerSession(authOptions);

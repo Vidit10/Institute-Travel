@@ -25,12 +25,13 @@ async function makeTrip(hostId: string, capacity = 1) {
   return Trip.create({
     hostId,
     mode: "train",
-    vehicleType: "Cab",
+    vehicleType: "Cab (5-seater)",
     pickupLocation: "Dharwad Railway Station",
-    destination: "IIT Dharwad Main Gate",
     departureTime: new Date(Date.now() + 60 * 60 * 1000),
     totalCapacity: capacity,
     seatsRemaining: capacity,
+    numTravelers: 1,
+    expectedFare: 300,
   });
 }
 
@@ -176,12 +177,13 @@ describe("girls-only visibility", () => {
     const trip = await Trip.create({
       hostId: host._id,
       mode: "bus",
-      vehicleType: "Tumtum",
+      vehicleType: "Tum Tum",
       pickupLocation: "Jubilee Circle",
-      destination: "IIT Dharwad Hostels",
       departureTime: new Date(Date.now() + 60 * 60 * 1000),
       totalCapacity: 3,
       seatsRemaining: 3,
+      numTravelers: 1,
+      expectedFare: 200,
       girlsOnly: true,
     });
 

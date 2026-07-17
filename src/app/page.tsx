@@ -14,8 +14,9 @@ type Trip = {
   departureTime: string;
   seatsRemaining: number;
   totalCapacity: number;
+  numTravelers: number;
+  expectedFare: number;
   girlsOnly?: boolean;
-  referenceFareNote?: string;
   hostId: { name: string; year: string; program: string };
 };
 
@@ -37,11 +38,11 @@ export default function HomePage() {
       <main className="mx-auto max-w-2xl px-4 py-6">
         <h1 className="text-lg font-semibold">Upcoming trips</h1>
 
-        {loading && <p className="mt-4 text-gray-400">Loading...</p>}
+        {loading && <p className="mt-4 text-gray-500 dark:text-gray-400">Loading...</p>}
         {!loading && trips.length === 0 && (
-          <p className="mt-4 text-gray-400">
+          <p className="mt-4 text-gray-500 dark:text-gray-400">
             No open trips yet. Be the first to{" "}
-            <Link href="/trips/new" className="text-brand-600 underline">
+            <Link href="/trips/new" className="text-brand-600 underline dark:text-brand-500">
               list one
             </Link>
             .
@@ -49,38 +50,44 @@ export default function HomePage() {
         )}
 
         <ul className="mt-4 space-y-3">
-          {trips.map((trip) => (
-            <li key={trip._id}>
-              <Link
-                href={`/trips/${trip._id}`}
-                className="block rounded-lg border border-gray-200 bg-white p-4 hover:border-brand-300"
-              >
-                <div className="flex items-center justify-between">
-                  <span className="text-sm font-medium uppercase text-brand-600">
-                    {trip.mode}
-                  </span>
-                  {trip.girlsOnly && (
-                    <span className="rounded bg-pink-100 px-2 py-0.5 text-xs text-pink-700">
-                      Girls only
+          {trips.map((trip) => {
+            const expectedFare = trip.expectedFare || 0;
+            const currentTravelers = trip.totalCapacity - trip.seatsRemaining;
+            const perPersonShare = currentTravelers > 0 ? expectedFare / currentTravelers : expectedFare;
+            
+            return (
+              <li key={trip._id}>
+                <Link
+                  href={`/trips/${trip._id}`}
+                  className="block rounded-lg border border-gray-200 bg-white p-4 hover:border-brand-300 dark:border-gray-800 dark:bg-gray-900 dark:hover:border-brand-700"
+                >
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <span className="text-sm font-medium uppercase text-brand-600 dark:text-brand-500">
+                      {trip.mode}
                     </span>
-                  )}
-                </div>
-                <p className="mt-1 font-medium">
-                  {trip.pickupLocation} → {trip.destination}
-                </p>
-                <p className="text-sm text-gray-500">
-                  {new Date(trip.departureTime).toLocaleString()} · {trip.vehicleType}
-                </p>
-                <p className="mt-1 text-sm text-gray-400">
-                  {trip.seatsRemaining}/{trip.totalCapacity} seats left · hosted by{" "}
-                  {trip.hostId?.name}
-                </p>
-                {trip.referenceFareNote && (
-                  <p className="mt-1 text-xs text-gray-400">Reference fare: {trip.referenceFareNote}</p>
-                )}
-              </Link>
-            </li>
-          ))}
+                    {trip.girlsOnly && (
+                      <span className="rounded bg-pink-100 px-2 py-0.5 text-xs text-pink-700 dark:bg-pink-950 dark:text-pink-300">
+                        Girls only
+                      </span>
+                    )}
+                  </div>
+                  <p className="mt-1 break-words font-medium">
+                    {trip.pickupLocation} → {trip.destination}
+                  </p>
+                  <p className="text-sm text-gray-500 dark:text-gray-400">
+                    {new Date(trip.departureTime).toLocaleString()} · {trip.vehicleType}
+                  </p>
+                  <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
+                    {trip.seatsRemaining}/{trip.totalCapacity} seats left · hosted by{" "}
+                    {trip.hostId?.name}
+                  </p>
+                  <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                    ₹{perPersonShare.toFixed(0)} each so far · ₹{expectedFare} total
+                  </p>
+                </Link>
+              </li>
+            );
+          })}
         </ul>
       </main>
     </>

@@ -3,8 +3,7 @@
 import { useEffect, useState } from "react";
 import { useSession } from "next-auth/react";
 import NavBar from "@/components/NavBar";
-
-const YEARS = ["UG-1", "UG-2", "UG-3", "UG-4", "PG-1", "PG-2"];
+import { PROGRAMS, PROGRAM_LABELS, YEAR_OPTIONS_BY_PROGRAM, YEAR_LABELS } from "@/lib/constants";
 
 export default function SettingsPage() {
   const { update } = useSession();
@@ -61,7 +60,7 @@ export default function SettingsPage() {
     return (
       <>
         <NavBar />
-        <main className="mx-auto max-w-md px-4 py-6 text-gray-400">Loading...</main>
+        <main className="mx-auto max-w-md px-4 py-6 text-gray-500 dark:text-gray-400">Loading...</main>
       </>
     );
   }
@@ -71,28 +70,28 @@ export default function SettingsPage() {
       <NavBar />
       <main className="mx-auto max-w-md px-4 py-6">
         <h1 className="text-lg font-semibold">Your profile</h1>
-        <p className="mt-1 text-sm text-gray-500">
-          {form.name} · {form.year} · {form.program}
+        <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
+          {form.name} · {YEAR_LABELS[form.year] ?? form.year} · {PROGRAM_LABELS[form.program as keyof typeof PROGRAM_LABELS] ?? form.program}
         </p>
 
         <form onSubmit={save} className="mt-6 space-y-4">
           <div>
             <label className="block text-sm font-medium">Name</label>
             <input
-              required
-              className="mt-1 w-full rounded-md border border-gray-300 px-3 py-2"
+              disabled
+              className="mt-1 w-full rounded-md border border-gray-300 dark:border-gray-700 bg-gray-100 dark:bg-gray-800 px-3 py-2 cursor-not-allowed text-gray-500 dark:text-gray-400"
               value={form.name}
-              onChange={(e) => setForm({ ...form, name: e.target.value })}
+              readOnly
             />
           </div>
 
           <div>
             <label className="block text-sm font-medium">Gender</label>
             <select
-              required
-              className="mt-1 w-full rounded-md border border-gray-300 px-3 py-2"
+              disabled
+              className="mt-1 w-full rounded-md border border-gray-300 dark:border-gray-700 bg-gray-100 dark:bg-gray-800 px-3 py-2 cursor-not-allowed text-gray-500 dark:text-gray-400"
               value={form.gender}
-              onChange={(e) => setForm({ ...form, gender: e.target.value })}
+              onChange={() => {}}
             >
               <option value="" disabled>Select</option>
               <option value="female">Female</option>
@@ -102,37 +101,53 @@ export default function SettingsPage() {
           </div>
 
           <div>
-            <label className="block text-sm font-medium">Program</label>
-            <select
-              className="mt-1 w-full rounded-md border border-gray-300 px-3 py-2"
-              value={form.program}
-              onChange={(e) => setForm({ ...form, program: e.target.value })}
-            >
-              <option value="UG">Undergraduate</option>
-              <option value="PG">Postgraduate</option>
-            </select>
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium">Year</label>
+            <label className="block text-sm font-medium">
+              Program <span className="text-red-500">*</span>
+            </label>
             <select
               required
-              className="mt-1 w-full rounded-md border border-gray-300 px-3 py-2"
-              value={form.year}
-              onChange={(e) => setForm({ ...form, year: e.target.value })}
+              className="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 dark:border-gray-700 dark:bg-gray-900"
+              value={form.program}
+              onChange={(e) => {
+                const program = e.target.value;
+                const validYears = YEAR_OPTIONS_BY_PROGRAM[program as keyof typeof YEAR_OPTIONS_BY_PROGRAM] as readonly string[];
+                setForm((f) => ({
+                  ...f,
+                  program,
+                  year: validYears.includes(f.year) ? f.year : "",
+                }));
+              }}
             >
-              <option value="" disabled>Select</option>
-              {YEARS.map((y) => (
-                <option key={y} value={y}>{y}</option>
+              {PROGRAMS.map((p) => (
+                <option key={p} value={p}>{PROGRAM_LABELS[p]}</option>
               ))}
             </select>
           </div>
 
           <div>
-            <label className="block text-sm font-medium">Phone number</label>
+            <label className="block text-sm font-medium">
+              Year <span className="text-red-500">*</span>
+            </label>
+            <select
+              required
+              className="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 dark:border-gray-700 dark:bg-gray-900"
+              value={form.year}
+              onChange={(e) => setForm({ ...form, year: e.target.value })}
+            >
+              <option value="" disabled>Select</option>
+              {YEAR_OPTIONS_BY_PROGRAM[form.program as keyof typeof YEAR_OPTIONS_BY_PROGRAM].map((y) => (
+                <option key={y} value={y}>{YEAR_LABELS[y]}</option>
+              ))}
+            </select>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium">
+              Phone number <span className="text-red-500">*</span>
+            </label>
             <input
               required
-              className="mt-1 w-full rounded-md border border-gray-300 px-3 py-2"
+              className="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 dark:border-gray-700 dark:bg-gray-900"
               value={form.phone}
               onChange={(e) => setForm({ ...form, phone: e.target.value })}
             />
@@ -158,8 +173,8 @@ export default function SettingsPage() {
             Share my phone number once a request is accepted
           </label>
 
-          {error && <p className="text-sm text-red-600">{error}</p>}
-          {saved && <p className="text-sm text-brand-600">Saved.</p>}
+          {error && <p className="text-sm text-red-600 dark:text-red-400">{error}</p>}
+          {saved && <p className="text-sm text-brand-600 dark:text-brand-500">Saved.</p>}
 
           <button
             type="submit"

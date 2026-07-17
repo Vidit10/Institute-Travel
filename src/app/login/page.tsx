@@ -22,7 +22,7 @@ function LoginError() {
   const error = params.get("error");
   if (!error) return null;
   return (
-    <p className="mt-4 max-w-sm rounded-lg bg-red-50 px-4 py-2 text-sm text-red-600">
+    <p className="mt-4 max-w-sm break-words rounded-lg bg-red-50 px-4 py-2 text-sm text-red-600 dark:bg-red-950 dark:text-red-300">
       {ERROR_MESSAGES[error] || `Sign-in failed (${error}). Please try again.`}
     </p>
   );
@@ -31,9 +31,9 @@ function LoginError() {
 export default function LoginPage() {
   return (
     <main className="flex min-h-screen flex-col items-center justify-center px-4 text-center">
-      <h1 className="text-2xl font-bold text-brand-700">Campus Travel</h1>
-      <p className="mt-2 text-gray-600">Campus travel, simplified — for IIT Dharwad.</p>
-      <p className="mt-1 text-sm text-gray-400">Sign in with your @iitdh.ac.in Google account.</p>
+      <h1 className="text-2xl font-bold text-brand-700 dark:text-brand-500">Campus Travel</h1>
+      <p className="mt-2 text-gray-600 dark:text-gray-400">Campus travel, simplified — for IIT Dharwad.</p>
+      <p className="mt-1 text-sm text-gray-500 dark:text-gray-500">Sign in with your @iitdh.ac.in Google account.</p>
       <Suspense fallback={null}>
         <LoginError />
       </Suspense>

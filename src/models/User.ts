@@ -1,4 +1,5 @@
 import { Schema, model, models, type InferSchemaType } from "mongoose";
+import { PROGRAMS, YEARS } from "@/lib/constants";
 
 const userSchema = new Schema(
   {
@@ -11,12 +12,8 @@ const userSchema = new Schema(
     onboarded: { type: Boolean, default: false },
     gender: { type: String, enum: ["female", "male", "other"], required: false },
     phone: { type: String, required: false },
-    year: {
-      type: String,
-      enum: ["UG-1", "UG-2", "UG-3", "UG-4", "PG-1", "PG-2"],
-      required: false,
-    },
-    program: { type: String, enum: ["UG", "PG"], required: false },
+    year: { type: String, enum: YEARS, required: false },
+    program: { type: String, enum: PROGRAMS, required: false },
 
     // Settings — editable any time after onboarding.
     nonEssentialEmailOptIn: { type: Boolean, default: true },

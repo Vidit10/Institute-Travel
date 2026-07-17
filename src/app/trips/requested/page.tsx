@@ -20,10 +20,10 @@ type MyRequest = {
 };
 
 const STATUS_STYLES: Record<string, string> = {
-  pending: "bg-yellow-100 text-yellow-700",
-  accepted: "bg-green-100 text-green-700",
-  declined: "bg-gray-100 text-gray-500",
-  expired: "bg-gray-100 text-gray-400",
+  pending: "bg-yellow-100 text-yellow-700 dark:bg-yellow-950 dark:text-yellow-300",
+  accepted: "bg-green-100 text-green-700 dark:bg-green-950 dark:text-green-300",
+  declined: "bg-gray-200 text-gray-600 dark:bg-gray-800 dark:text-gray-400",
+  expired: "bg-gray-200 text-gray-600 dark:bg-gray-800 dark:text-gray-500",
 };
 
 export default function RequestedTripsPage() {
@@ -43,11 +43,11 @@ export default function RequestedTripsPage() {
       <main className="mx-auto max-w-2xl px-4 py-6">
         <h1 className="text-lg font-semibold">Trips you&apos;ve requested to join</h1>
 
-        {loading && <p className="mt-4 text-gray-400">Loading...</p>}
+        {loading && <p className="mt-4 text-gray-500 dark:text-gray-400">Loading...</p>}
         {!loading && requests.length === 0 && (
-          <p className="mt-4 text-gray-400">
+          <p className="mt-4 text-gray-500 dark:text-gray-400">
             No requests yet.{" "}
-            <Link href="/" className="text-brand-600 underline">
+            <Link href="/" className="text-brand-600 underline dark:text-brand-500">
               Browse trips
             </Link>
             .
@@ -59,21 +59,21 @@ export default function RequestedTripsPage() {
             <li key={r._id}>
               <Link
                 href={`/trips/${r.trip._id}`}
-                className="block rounded-lg border border-gray-200 bg-white p-4 hover:border-brand-300"
+                className="block rounded-lg border border-gray-200 bg-white p-4 hover:border-brand-300 dark:border-gray-800 dark:bg-gray-900 dark:hover:border-brand-700"
               >
-                <div className="flex items-center justify-between">
-                  <span className="text-sm font-medium uppercase text-brand-600">{r.trip.mode}</span>
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <span className="text-sm font-medium uppercase text-brand-600 dark:text-brand-500">{r.trip.mode}</span>
                   <span className={`rounded px-2 py-0.5 text-xs ${STATUS_STYLES[r.status]}`}>{r.status}</span>
                 </div>
-                <p className="mt-1 font-medium">
+                <p className="mt-1 break-words font-medium">
                   {r.trip.pickupLocation} → {r.trip.destination}
                 </p>
-                <p className="text-sm text-gray-500">
+                <p className="text-sm text-gray-500 dark:text-gray-400">
                   {new Date(r.trip.departureTime).toLocaleString()} · hosted by {r.trip.hostName}
                 </p>
-                {r.trip.hostPhone && <p className="mt-1 text-sm text-brand-600">{r.trip.hostPhone}</p>}
+                {r.trip.hostPhone && <p className="mt-1 text-sm text-brand-600 dark:text-brand-500">{r.trip.hostPhone}</p>}
                 {r.status === "pending" && (
-                  <p className="mt-1 text-xs text-gray-400">
+                  <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
                     Expires {new Date(r.expiresAt).toLocaleString()} if the host doesn&apos;t respond
                   </p>
                 )}

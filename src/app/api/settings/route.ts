@@ -4,16 +4,20 @@ import { z } from "zod";
 import { authOptions } from "@/lib/auth";
 import { dbConnect } from "@/lib/mongodb";
 import { User } from "@/models/User";
+import { PROGRAMS, YEARS, YEAR_OPTIONS_BY_PROGRAM } from "@/lib/constants";
 
-const settingsSchema = z.object({
-  name: z.string().min(1).max(80),
-  gender: z.enum(["female", "male", "other"]),
-  year: z.enum(["UG-1", "UG-2", "UG-3", "UG-4", "PG-1", "PG-2"]),
-  program: z.enum(["UG", "PG"]),
-  phone: z.string().min(7).max(15),
-  nonEssentialEmailOptIn: z.boolean(),
-  contactShareDefaultConsent: z.boolean(),
-});
+const settingsSchema = z
+  .object({
+    year: z.enum(YEARS),
+    program: z.enum(PROGRAMS),
+    phone: z.string().min(7).max(15),
+    nonEssentialEmailOptIn: z.boolean(),
+    contactShareDefaultConsent: z.boolean(),
+  })
+  .refine((data) => (YEAR_OPTIONS_BY_PROGRAM[data.program] as readonly string[]).includes(data.year), {
+    message: "Year doesn't match the selected program",
+    path: ["year"],
+  });
 
 export async function GET() {
   const session = await getServerSession(authOptions);

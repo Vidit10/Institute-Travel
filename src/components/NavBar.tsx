@@ -21,9 +21,30 @@ function ThemeToggle() {
       onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
       aria-label={theme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
       title={theme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
-      className="inline-flex h-6 w-6 items-center justify-center text-base leading-none"
+      className="inline-flex h-6 w-6 items-center justify-center leading-none"
     >
-      {theme === "dark" ? "☀️" : "🌙"}
+      {theme === "dark" ? (
+        // Sun icon
+        <svg width="20" height="20" viewBox="0 0 20 20" fill="none" aria-hidden>
+          <circle cx="10" cy="10" r="3.5" stroke="currentColor" strokeWidth="1.5" />
+          <path
+            d="M10 1.5v2M10 16.5v2M18.5 10h-2M3.5 10h-2M15.6 4.4l-1.4 1.4M5.8 14.2l-1.4 1.4M15.6 15.6l-1.4-1.4M5.8 5.8L4.4 4.4"
+            stroke="currentColor"
+            strokeWidth="1.5"
+            strokeLinecap="round"
+          />
+        </svg>
+      ) : (
+        // Moon icon
+        <svg width="20" height="20" viewBox="0 0 20 20" fill="none" aria-hidden>
+          <path
+            d="M17 11.3A7 7 0 018.7 3 7 7 0 1017 11.3z"
+            stroke="currentColor"
+            strokeWidth="1.5"
+            strokeLinejoin="round"
+          />
+        </svg>
+      )}
     </button>
   );
 }
@@ -46,15 +67,18 @@ export default function NavBar() {
       <Link href="/settings" className={LINK_CLASS} onClick={() => setMenuOpen(false)}>
         Settings
       </Link>
-      {process.env.NEXT_PUBLIC_FEEDBACK_URL && (
+      <Link href="/feedback" className={LINK_CLASS} onClick={() => setMenuOpen(false)}>
+        Feedback
+      </Link>
+      {process.env.NEXT_PUBLIC_GITHUB_URL && (
         <a
-          href={process.env.NEXT_PUBLIC_FEEDBACK_URL}
+          href={process.env.NEXT_PUBLIC_GITHUB_URL}
           target="_blank"
           rel="noopener noreferrer"
           className={LINK_CLASS}
           onClick={() => setMenuOpen(false)}
         >
-          Feedback
+          GitHub
         </a>
       )}
       {session?.user && (
