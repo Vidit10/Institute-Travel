@@ -34,6 +34,7 @@ export async function respondToJoinRequest(
   if (action === "decline") {
     joinRequest.status = "declined";
     joinRequest.respondedAt = new Date();
+    joinRequest.riderSeen = false; // the rider needs to be told
     await joinRequest.save();
     return { ok: true, joinRequest };
   }
@@ -56,6 +57,7 @@ export async function respondToJoinRequest(
 
   joinRequest.status = "accepted";
   joinRequest.respondedAt = new Date();
+  joinRequest.riderSeen = false; // the rider needs to be told
   await joinRequest.save();
 
   return { ok: true, joinRequest, trip: updatedTrip };

@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import NavBar from "@/components/NavBar";
 import PushSubscribe from "@/components/PushSubscribe";
+import LoadingScreen from "@/components/LoadingScreen";
 
 type Trip = {
   _id: string;
@@ -38,7 +39,7 @@ export default function HomePage() {
       <main className="mx-auto max-w-2xl px-4 py-6">
         <h1 className="text-lg font-semibold">Upcoming trips</h1>
 
-        {loading && <p className="mt-4 text-gray-500 dark:text-gray-400">Loading...</p>}
+        {loading && <LoadingScreen />}
         {!loading && trips.length === 0 && (
           <p className="mt-4 text-gray-500 dark:text-gray-400">
             No open trips yet. Be the first to{" "}

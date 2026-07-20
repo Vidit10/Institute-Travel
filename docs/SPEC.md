@@ -145,3 +145,15 @@ Superseding the relevant parts of sections 3, 6, 8, 9 above:
 - **Onboarding is now a two-step flow**: fill in → review summary → confirm. All fields mandatory, marked with `*`.
 - **Feedback is a native in-app page** (`/feedback`, stored in Mongo), not an external form link.
 - **Trip cancellation uses an in-app confirmation** (not the browser's native `confirm()`), with friendlier copy.
+
+## 15. Second review pass
+
+- **Minimum party size**: a trip must leave at least one seat open (`numTravelers < totalCapacity`) — listing yourself with zero room for anyone else is rejected.
+- **Advance window widened to 30 days** (`MAX_ADVANCE_DAYS`, was 72 hours) — still a floor of "must be in the future."
+- **Time-of-day picker replaced** with explicit Hour / Minute (5-minute steps) / AM-PM dropdowns instead of relying on the browser's native `datetime-local` control.
+- **Trip listing now has a review-before-confirm step**, same pattern as onboarding.
+- **Shareable trip link**: a Share/Copy button on the trip page using the Web Share API with a clipboard fallback. Since every route is already login-gated, this is just the existing trip URL — no separate public link exists. This closed a real gap: the login page previously ignored any `callbackUrl` middleware attaches when redirecting an unauthenticated visit, so a shared link would have dropped a signed-in user at the home feed instead of the trip; fixed by having the sign-in button read and forward `callbackUrl`.
+- **Notification bell** (`src/components/NotificationBell.tsx`): polls `/api/notifications` every ~25s. Backed by two new booleans on `JoinRequest` — `hostSeen` (default false — new pending request is news to the host) and `riderSeen` (default true — a rider doesn't need telling about their own action, flips false whenever the request is accepted/declined/expired, or the trip is cancelled). Marking seen happens only when the bell dropdown is opened; per-page badges (e.g. the "New" tag on `/trips/requested`) read the same flags without clearing them. This is polling, not real-time push — no websocket/Pusher infrastructure was introduced.
+- **Application-level rate limiting** (`src/lib/rateLimit.ts`, not network-level DDoS mitigation — that's the hosting platform's job): per-user sliding window (20 requests/minute) across the mutating endpoints (create trip, send/respond to a request, cancel a trip, submit feedback); exceeding it triggers a 15-minute lockout with a witty rejection message, logged to a separate `AbuseLog` collection.
+- **Loading screen**: a shared `LoadingScreen` component (spinner + a random rotating fact) replaces bare "Loading..." text across the app.
+- **Footer restructured**: "Made with ❤️ — for the IIT Dharwad Fraternity", plus GitHub and Feedback links moved here from the nav bar (nav bar no longer shows them).

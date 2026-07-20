@@ -31,6 +31,7 @@ export async function GET() {
         status: string;
         createdAt: string;
         expiresAt: string;
+        riderSeen: boolean;
         tripId: {
           _id: string;
           mode: string;
@@ -44,6 +45,7 @@ export async function GET() {
         _id: rr._id,
         status: rr.status,
         expiresAt: rr.expiresAt,
+        isNew: rr.riderSeen === false,
         trip: {
           _id: rr.tripId._id,
           mode: rr.tripId.mode,

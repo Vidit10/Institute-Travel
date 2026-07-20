@@ -1,4 +1,5 @@
 import type { Metadata, Viewport } from "next";
+import Link from "next/link";
 import "./globals.css";
 import SessionProvider from "@/components/SessionProvider";
 import PostHogProvider from "@/components/PostHogProvider";
@@ -31,7 +32,22 @@ export default function RootLayout({
             <PostHogProvider>
               {children}
               <footer className="mt-8 border-t border-gray-200 py-4 text-center text-xs text-gray-400 dark:border-gray-800 dark:text-gray-500">
-                Made with ❤️ by Vidit Parikh
+                <div className="flex flex-col items-center gap-2 sm:flex-row sm:justify-center sm:gap-4">
+                  <span>Made with ❤️ — for the IIT Dharwad Fraternity</span>
+                  <div className="flex items-center gap-4">
+                    <a
+                      href="https://github.com/Vidit10/Institute-Travel"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="hover:text-gray-600 dark:hover:text-gray-300"
+                    >
+                      GitHub
+                    </a>
+                    <Link href="/feedback" className="hover:text-gray-600 dark:hover:text-gray-300">
+                      Feedback
+                    </Link>
+                  </div>
+                </div>
               </footer>
             </PostHogProvider>
           </SessionProvider>

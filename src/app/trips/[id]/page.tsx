@@ -3,6 +3,7 @@
 import { useEffect, useState, useCallback } from "react";
 import { useParams } from "next/navigation";
 import NavBar from "@/components/NavBar";
+import LoadingScreen from "@/components/LoadingScreen";
 import { REFERENCE_FARES, YEAR_LABELS, PROGRAM_LABELS } from "@/lib/constants";
 
 function formatYearProgram(year: string, program: string) {
@@ -49,6 +50,7 @@ export default function TripDetailPage() {
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [confirmingCancel, setConfirmingCancel] = useState(false);
+  const [shareLabel, setShareLabel] = useState("Share this trip");
 
   const load = useCallback(() => {
     fetch(`/api/trips/${id}`)
@@ -64,7 +66,9 @@ export default function TripDetailPage() {
     return (
       <>
         <NavBar />
-        <main className="mx-auto max-w-md px-4 py-6 text-gray-400 dark:text-gray-500">Loading...</main>
+        <main className="mx-auto max-w-md px-4 py-6">
+          <LoadingScreen />
+        </main>
       </>
     );
   }
@@ -76,10 +80,16 @@ export default function TripDetailPage() {
 
   async function cancelTrip() {
     setBusy(true);
+    setMessage(null);
     const res = await fetch(`/api/trips/${id}/cancel`, { method: "POST" });
+    const json = await res.json().catch(() => null);
     setBusy(false);
     setConfirmingCancel(false);
-    if (res.ok) load();
+    if (!res.ok) {
+      setMessage(json?.error || "Failed to cancel");
+      return;
+    }
+    load();
   }
 
   async function sendRequest() {
@@ -96,15 +106,41 @@ export default function TripDetailPage() {
     load();
   }
 
+  async function shareTrip() {
+    const url = window.location.href;
+    const shareData = { title: "Join my trip on Campus Travel", url };
+    if (navigator.share) {
+      try {
+        await navigator.share(shareData);
+      } catch {
+        // User cancelled the native share sheet — not an error.
+      }
+      return;
+    }
+    try {
+      await navigator.clipboard.writeText(url);
+      setShareLabel("Link copied!");
+      setTimeout(() => setShareLabel("Share this trip"), 2000);
+    } catch {
+      setShareLabel("Couldn't copy — copy the URL manually");
+    }
+  }
+
   async function respond(requestId: string, action: "accept" | "decline") {
     setBusy(true);
+    setMessage(null);
     const res = await fetch(`/api/trips/${id}/requests/${requestId}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ action }),
     });
+    const json = await res.json().catch(() => null);
     setBusy(false);
-    if (res.ok) load();
+    if (!res.ok) {
+      setMessage(json?.error || "Failed to respond");
+      return;
+    }
+    load();
   }
 
   return (
@@ -165,6 +201,13 @@ export default function TripDetailPage() {
             )}
           </div>
         </div>
+
+        <button
+          onClick={shareTrip}
+          className="mt-3 w-full rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium hover:bg-gray-50 dark:border-gray-700 dark:hover:bg-gray-800"
+        >
+          {shareLabel}
+        </button>
 
         {message && <p className="mt-3 text-sm text-brand-600 dark:text-brand-500">{message}</p>}
 

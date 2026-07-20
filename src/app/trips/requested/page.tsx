@@ -3,11 +3,13 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import NavBar from "@/components/NavBar";
+import LoadingScreen from "@/components/LoadingScreen";
 
 type MyRequest = {
   _id: string;
   status: string;
   expiresAt: string;
+  isNew: boolean;
   trip: {
     _id: string;
     mode: string;
@@ -43,7 +45,7 @@ export default function RequestedTripsPage() {
       <main className="mx-auto max-w-2xl px-4 py-6">
         <h1 className="text-lg font-semibold">Trips you&apos;ve requested to join</h1>
 
-        {loading && <p className="mt-4 text-gray-500 dark:text-gray-400">Loading...</p>}
+        {loading && <LoadingScreen />}
         {!loading && requests.length === 0 && (
           <p className="mt-4 text-gray-500 dark:text-gray-400">
             No requests yet.{" "}
@@ -62,7 +64,12 @@ export default function RequestedTripsPage() {
                 className="block rounded-lg border border-gray-200 bg-white p-4 hover:border-brand-300 dark:border-gray-800 dark:bg-gray-900 dark:hover:border-brand-700"
               >
                 <div className="flex flex-wrap items-center justify-between gap-2">
-                  <span className="text-sm font-medium uppercase text-brand-600 dark:text-brand-500">{r.trip.mode}</span>
+                  <span className="flex items-center gap-2">
+                    <span className="text-sm font-medium uppercase text-brand-600 dark:text-brand-500">{r.trip.mode}</span>
+                    {r.isNew && (
+                      <span className="rounded bg-red-600 px-1.5 py-0.5 text-[10px] font-medium text-white">New</span>
+                    )}
+                  </span>
                   <span className={`rounded px-2 py-0.5 text-xs ${STATUS_STYLES[r.status]}`}>{r.status}</span>
                 </div>
                 <p className="mt-1 break-words font-medium">

@@ -28,7 +28,7 @@ export async function GET(req: NextRequest) {
   if (toExpire.length > 0) {
     await JoinRequest.updateMany(
       { _id: { $in: toExpire.map((r) => r._id) } },
-      { status: "expired" }
+      { status: "expired", riderSeen: false }
     );
 
     await Promise.all(

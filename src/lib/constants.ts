@@ -54,9 +54,13 @@ export const RECOMMENDED_CAPACITY: Record<string, number> = {
 // How long a join request stays pending before auto-expiring if the host doesn't respond.
 export const REQUEST_EXPIRY_HOURS = 6;
 
-// A trip's departure can't be scheduled further out than this — V1 is for imminent
-// travel, not a general future-scheduling tool.
-export const MAX_ADVANCE_HOURS = 72;
+// A trip's departure can't be scheduled further out than this — up to a month
+// ahead, not a general far-future-scheduling tool.
+export const MAX_ADVANCE_DAYS = 30;
+export const MAX_ADVANCE_HOURS = MAX_ADVANCE_DAYS * 24;
+
+// Minute increments offered in the time-of-day picker (item 3: AM/PM dropdown).
+export const MINUTE_OPTIONS = Array.from({ length: 12 }, (_, i) => i * 5); // 0,5,...,55
 
 // Companion email invites (docs: host pre-adds known travellers) expire after this
 // long if unclaimed, same reasoning as request expiry.

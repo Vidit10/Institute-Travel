@@ -40,6 +40,8 @@ export async function resolveCompanions(
           status: "accepted",
           expiresAt: trip.departureTime,
           respondedAt: now,
+          hostSeen: true, // the host just did this themselves
+          riderSeen: false, // the companion needs to find out
         });
         return;
       }

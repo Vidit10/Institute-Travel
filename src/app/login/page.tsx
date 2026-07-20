@@ -28,6 +28,23 @@ function LoginError() {
   );
 }
 
+function SignInButton() {
+  const params = useSearchParams();
+  // Middleware redirects an unauthenticated visit to a protected page (e.g. a
+  // shared trip link) here with ?callbackUrl=<original path> — honor it so
+  // signing in lands them back where they were headed, not always at "/".
+  const callbackUrl = params.get("callbackUrl") || "/";
+
+  return (
+    <button
+      onClick={() => signIn("google", { callbackUrl })}
+      className="mt-8 rounded-lg bg-brand-600 px-6 py-3 font-medium text-white hover:bg-brand-700"
+    >
+      Continue with Google
+    </button>
+  );
+}
+
 export default function LoginPage() {
   return (
     <main className="flex min-h-screen flex-col items-center justify-center px-4 text-center">
@@ -37,12 +54,9 @@ export default function LoginPage() {
       <Suspense fallback={null}>
         <LoginError />
       </Suspense>
-      <button
-        onClick={() => signIn("google", { callbackUrl: "/" })}
-        className="mt-8 rounded-lg bg-brand-600 px-6 py-3 font-medium text-white hover:bg-brand-700"
-      >
-        Continue with Google
-      </button>
+      <Suspense fallback={null}>
+        <SignInButton />
+      </Suspense>
     </main>
   );
 }

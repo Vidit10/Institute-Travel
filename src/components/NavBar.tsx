@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { signOut, useSession } from "next-auth/react";
 import { useTheme } from "next-themes";
+import NotificationBell from "./NotificationBell";
 
 const LINK_CLASS = "text-gray-500 hover:underline dark:text-gray-400";
 
@@ -67,20 +68,6 @@ export default function NavBar() {
       <Link href="/settings" className={LINK_CLASS} onClick={() => setMenuOpen(false)}>
         Settings
       </Link>
-      <Link href="/feedback" className={LINK_CLASS} onClick={() => setMenuOpen(false)}>
-        Feedback
-      </Link>
-      {process.env.NEXT_PUBLIC_GITHUB_URL && (
-        <a
-          href={process.env.NEXT_PUBLIC_GITHUB_URL}
-          target="_blank"
-          rel="noopener noreferrer"
-          className={LINK_CLASS}
-          onClick={() => setMenuOpen(false)}
-        >
-          GitHub
-        </a>
-      )}
       {session?.user && (
         <button
           onClick={() => signOut({ callbackUrl: "/login" })}
@@ -102,11 +89,13 @@ export default function NavBar() {
         {/* Desktop links */}
         <div className="hidden items-center gap-4 text-sm sm:flex">
           {links}
+          {session?.user && <NotificationBell />}
           <ThemeToggle />
         </div>
 
-        {/* Mobile: theme toggle + hamburger */}
-        <div className="flex items-center gap-3 sm:hidden">
+        {/* Mobile: bell + theme toggle + hamburger */}
+        <div className="flex items-center gap-2 sm:hidden">
+          {session?.user && <NotificationBell />}
           <ThemeToggle />
           <button
             onClick={() => setMenuOpen((open) => !open)}

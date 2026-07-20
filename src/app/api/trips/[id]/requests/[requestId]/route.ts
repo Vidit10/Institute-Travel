@@ -5,6 +5,7 @@ import { dbConnect } from "@/lib/mongodb";
 import { notifyUser } from "@/lib/notify";
 import { track } from "@/lib/analytics";
 import { respondToJoinRequest } from "@/lib/tripRequests";
+import { rateLimitOrRespond } from "@/lib/rateLimit";
 
 // Host accepts or declines a pending request.
 export async function PATCH(
@@ -23,6 +24,10 @@ export async function PATCH(
   }
 
   await dbConnect();
+
+  const limited = await rateLimitOrRespond(session.user.id, session.user.email || "", "trips:respond");
+  if (limited) return limited;
+
   const result = await respondToJoinRequest(id, requestId, session.user.id, action);
 
   if (!result.ok) {

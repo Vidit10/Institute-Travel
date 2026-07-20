@@ -9,6 +9,7 @@ import { notifyUser } from "@/lib/notify";
 import { track } from "@/lib/analytics";
 import { REQUEST_EXPIRY_HOURS } from "@/lib/constants";
 import { sweepExpired } from "@/lib/expireRequests";
+import { rateLimitOrRespond } from "@/lib/rateLimit";
 
 export async function POST(
   req: NextRequest,
@@ -21,6 +22,10 @@ export async function POST(
 
   const { id } = await params;
   await dbConnect();
+
+  const limited = await rateLimitOrRespond(session.user.id, session.user.email || "", "trips:request");
+  if (limited) return limited;
+
   const [trip, rider] = await Promise.all([
     Trip.findById(id),
     User.findById(session.user.id),

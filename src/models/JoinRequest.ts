@@ -9,6 +9,14 @@ const joinRequestSchema = new Schema(
     status: { type: String, enum: REQUEST_STATUSES, default: "pending" },
     expiresAt: { type: Date, required: true },
     respondedAt: { type: Date, required: false },
+
+    // Notification-bell "unseen" flags. hostSeen starts false — a new pending
+    // request is news to the host. riderSeen starts true — a rider doesn't
+    // need to be notified of the request they just made themselves; it flips
+    // to false whenever something changes that the rider needs to see (their
+    // request got accepted/declined/expired, or the trip got cancelled).
+    hostSeen: { type: Boolean, default: false },
+    riderSeen: { type: Boolean, default: true },
   },
   { timestamps: true }
 );

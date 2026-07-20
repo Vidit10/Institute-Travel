@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useSession } from "next-auth/react";
 import NavBar from "@/components/NavBar";
+import LoadingScreen from "@/components/LoadingScreen";
 import { PROGRAMS, PROGRAM_LABELS, YEAR_OPTIONS_BY_PROGRAM, YEAR_LABELS } from "@/lib/constants";
 
 export default function SettingsPage() {
@@ -60,7 +61,7 @@ export default function SettingsPage() {
     return (
       <>
         <NavBar />
-        <main className="mx-auto max-w-md px-4 py-6 text-gray-500 dark:text-gray-400">Loading...</main>
+        <LoadingScreen />
       </>
     );
   }

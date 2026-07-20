@@ -5,6 +5,7 @@ import { authOptions } from "@/lib/auth";
 import { dbConnect } from "@/lib/mongodb";
 import { Feedback } from "@/models/Feedback";
 import { track } from "@/lib/analytics";
+import { rateLimitOrRespond } from "@/lib/rateLimit";
 
 const feedbackSchema = z.object({
   category: z.enum(["recommendation", "bug", "other"]),
@@ -23,6 +24,10 @@ export async function POST(req: NextRequest) {
   }
 
   await dbConnect();
+
+  const limited = await rateLimitOrRespond(session.user.id, session.user.email || "", "feedback:create");
+  if (limited) return limited;
+
   await Feedback.create({
     userId: session.user.id,
     category: parsed.data.category,

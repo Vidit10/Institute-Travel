@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import NavBar from "@/components/NavBar";
+import LoadingScreen from "@/components/LoadingScreen";
 
 type MyTrip = {
   _id: string;
@@ -33,7 +34,7 @@ export default function MyTripsPage() {
       <main className="mx-auto max-w-2xl px-4 py-6">
         <h1 className="text-lg font-semibold">Trips you&apos;re hosting</h1>
 
-        {loading && <p className="mt-4 text-gray-500 dark:text-gray-400">Loading...</p>}
+        {loading && <LoadingScreen />}
         {!loading && trips.length === 0 && (
           <p className="mt-4 text-gray-500 dark:text-gray-400">
             You haven&apos;t listed a trip yet.{" "}

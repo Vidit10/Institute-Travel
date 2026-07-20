@@ -7,6 +7,7 @@ import { Trip } from "@/models/Trip";
 import { User } from "@/models/User";
 import { track } from "@/lib/analytics";
 import { resolveCompanions } from "@/lib/companionInvites";
+import { rateLimitOrRespond } from "@/lib/rateLimit";
 import {
   PICKUP_LOCATIONS,
   TRIP_MODES,
@@ -28,9 +29,9 @@ const createTripSchema = z
     girlsOnly: z.boolean().optional(),
     expectedFare: z.number().min(0),
   })
-  .refine((data) => data.numTravelers <= data.totalCapacity, {
-    message: "Your party size can't exceed the total capacity",
-    path: ["numTravelers"],
+  .refine((data) => data.numTravelers < data.totalCapacity, {
+    message: "Leave at least one seat open for someone else to join",
+    path: ["totalCapacity"],
   })
   .refine((data) => data.companionEmails.length === data.numTravelers - 1, {
     message: "Number of companion emails must match party size minus you",
@@ -89,6 +90,10 @@ export async function POST(req: NextRequest) {
   }
 
   await dbConnect();
+
+  const limited = await rateLimitOrRespond(session.user.id, session.user.email || "", "trips:create");
+  if (limited) return limited;
+
   const host = await User.findById(session.user.id);
   if (!host?.onboarded) {
     return NextResponse.json({ error: "complete onboarding first" }, { status: 403 });

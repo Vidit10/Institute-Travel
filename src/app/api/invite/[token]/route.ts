@@ -60,6 +60,8 @@ export async function POST(
       status: "accepted",
       expiresAt: trip.departureTime,
       respondedAt: new Date(),
+      hostSeen: false, // the host needs to find out their invitee confirmed
+      riderSeen: true, // the rider just did this themselves
     });
   } catch (err: unknown) {
     // Already has an active request on this trip (e.g. requested separately before

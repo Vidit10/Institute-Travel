@@ -28,7 +28,8 @@ export default function FeedbackPage() {
         body: JSON.stringify({ category, message }),
       });
       if (!res.ok) {
-        setError("Couldn't submit — please try again.");
+        const data = await res.json().catch(() => null);
+        setError(data?.error || "Couldn't submit — please try again.");
         return;
       }
       setMessage("");
