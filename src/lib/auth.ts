@@ -4,6 +4,7 @@ import { dbConnect } from "@/lib/mongodb";
 import { User } from "@/models/User";
 import { ALLOWED_EMAIL_DOMAIN } from "@/lib/constants";
 import { track } from "@/lib/analytics";
+import { isAdminEmail } from "@/lib/admin";
 
 export const authOptions: NextAuthOptions = {
   providers: [
@@ -32,27 +33,27 @@ export const authOptions: NextAuthOptions = {
     },
     async signIn({ profile }) {
       const email = profile?.email;
-      if (!email || !email.toLowerCase().endsWith(`@${ALLOWED_EMAIL_DOMAIN}`)) {
+      const admin = isAdminEmail(email);
+      if (!email || !(admin || email.toLowerCase().endsWith(`@${ALLOWED_EMAIL_DOMAIN}`))) {
         return false;
       }
 
       await dbConnect();
       const existing = await User.findOne({ googleId: profile.sub });
-      if (!existing) {
-        const newUser = await User.findOneAndUpdate(
-          { googleId: profile?.sub },
-          {
-            $setOnInsert: {
-              googleId: profile.sub,
-              email: email.toLowerCase(),
-              name: profile.name,
-              image: (profile as { picture?: string }).picture,
-            },
+      const dbUser = await User.findOneAndUpdate(
+        { googleId: profile.sub },
+        {
+          $set: { lastLoginAt: new Date() },
+          $setOnInsert: {
+            googleId: profile.sub,
+            email: email.toLowerCase(),
+            name: profile.name,
+            image: (profile as { picture?: string }).picture,
           },
-          { upsert: true, new: true }
-        );
-        track(newUser._id.toString(), "signup");
-      }
+        },
+        { upsert: true, new: true }
+      );
+      if (!existing) track(dbUser._id.toString(), "signup");
 
       return true;
     },
@@ -65,6 +66,7 @@ export const authOptions: NextAuthOptions = {
           session.user.onboarded = dbUser.onboarded;
           session.user.gender = dbUser.gender;
         }
+        session.user.isAdmin = isAdminEmail(session.user.email);
       }
       return session;
     },

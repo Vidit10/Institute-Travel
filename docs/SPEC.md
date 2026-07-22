@@ -204,3 +204,46 @@ outside the app.
   24–48 hours for someone to apply it, and sign out and back in afterward so any part of the
   UI still reading from the cached session (rather than a fresh `/api/settings` fetch) picks
   up the new value.
+
+## 19. Admin dashboard
+
+A single-page, desktop-oriented dashboard at `/admin` for tracking product usage — separate
+from the PostHog analytics in section 11, and deliberately not dependent on it (no external
+API call at request time, just the app's own MongoDB data).
+
+- **Access**: gated by `ADMIN_EMAILS`, a comma-separated env var (not a database role) —
+  keeps admin status out of the `User` schema entirely. In practice the current admin address
+  is a normal `@iitdh.ac.in` account, so it signs in and onboards exactly like any other
+  student — `ADMIN_EMAILS` just additionally unlocks `/admin` for it. The env var still
+  accepts *any* email provider (it bypasses the domain restriction in the `signIn` callback
+  as an OR condition, not an AND), so a non-institute admin remains possible later without a
+  code change — see the "known friction" note below if that's ever used. Enforced in three
+  places: the `signIn` callback (who's even allowed to authenticate at all), `src/middleware.ts`
+  (redirect-before-render for `/admin/*`, and it runs *before* the onboarding-gate check, so
+  `/admin` is reachable even for an admin who hasn't onboarded), and `/api/admin/metrics`
+  itself (re-checks the session server-side, independent of the middleware layer) — the same
+  "server enforces, an earlier redirect alone is not enough" posture already used for
+  consent-gated contact info.
+- **Known friction (only relevant for a future non-institute admin)**: the Google provider
+  always sends the `hd=iitdh.ac.in` hint on sign-in (see section 2), which nudges Google's
+  account chooser toward institute accounts. An admin signing in with a personal email may
+  need "Use another account" rather than picking it straight from the chooser — a UX wrinkle,
+  not a security gap (the `hd` param was never the enforcement boundary; the `signIn`
+  callback is). Doesn't apply to the current `@iitdh.ac.in` admin account.
+- **Metrics shown**, all computed live from Mongo: total/onboarded users, weekly/monthly
+  active users (from a new `lastLoginAt` field on `User`, set once per sign-in), trips
+  created (total, by mode, 30-day trend), join-request accept rate, girls-only usage (trips
+  + arrivals board), program distribution, and an estimated money-saved figure.
+- **Money saved is a modeled estimate, not a real figure** — the app has no payment data.
+  Per trip with 2+ current travelers on a route with a known reference fare (section 9,
+  excludes the one "TBD" route): every rider but the host is assumed to have otherwise paid
+  the full reference-fare midpoint alone, instead paying an equal share of the actual fare;
+  the difference is summed across all non-cancelled trips. See
+  `src/lib/adminMetrics.ts` (unit-tested in `tests/adminMetrics.test.ts`) for the exact
+  formula — worth reading before quoting the number anywhere it needs to be defended.
+- **Feedback**, grouped by category, most recent first within each group — read-only for v1
+  (see section 18 for the categories, including `profile_correction`).
+- **Rate-limit lockouts**, not "DDoS attempts" — shown under that label deliberately. There is
+  no network-level DDoS detection in this app (see CONTRIBUTING.md); what's shown is
+  `AbuseLog`, the record of users who tripped the per-user rate limit (section 15). Calling
+  it DDoS monitoring would overclaim what the app actually does.

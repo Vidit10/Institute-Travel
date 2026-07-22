@@ -29,6 +29,11 @@ function AccountPanelItems({ onNavigate }: { onNavigate: () => void }) {
 
   return (
     <div className="py-1">
+      {session?.user?.isAdmin && (
+        <Link href="/admin" className={ITEM_CLASS} onClick={onNavigate}>
+          Admin dashboard
+        </Link>
+      )}
       <Link href="/trips/mine" className={ITEM_CLASS} onClick={onNavigate}>
         My Rides
       </Link>

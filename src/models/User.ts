@@ -15,6 +15,10 @@ const userSchema = new Schema(
     year: { type: String, enum: YEARS, required: false },
     program: { type: String, enum: PROGRAMS, required: false },
 
+    // Set on every successful sign-in (not on every session check) — powers
+    // the admin dashboard's WAU/MAU active-user counts.
+    lastLoginAt: { type: Date, required: false },
+
     // Settings — editable any time after onboarding.
     contactShareDefaultConsent: { type: Boolean, default: true },
     // Only meaningful for female users — pre-marks their arrival-board posts

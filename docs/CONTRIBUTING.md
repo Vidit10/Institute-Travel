@@ -20,11 +20,14 @@ scope for V1 and what's explicitly deferred.
   - `Trip` — a host's listing
   - `JoinRequest` — a rider's request to join a trip (pending/accepted/declined/expired)
   - `PushSubscription` — web-push endpoints per user
+  - `AbuseLog` — rate-limit lockout records (see the rate-limiting bullet below)
 - **Auth**: Auth.js (`next-auth`) with the Google provider, restricted server-side to
-  `@iitdh.ac.in` emails in `src/lib/auth.ts` — the `hd` param on the provider is just a UX
-  hint to Google's account chooser, the actual enforcement is the `signIn` callback.
+  `@iitdh.ac.in` emails (or an address listed in `ADMIN_EMAILS`, see below) in
+  `src/lib/auth.ts` — the `hd` param on the provider is just a UX hint to Google's account
+  chooser, the actual enforcement is the `signIn` callback.
 - **Middleware** (`src/middleware.ts`): redirects any authenticated-but-not-onboarded user
-  to `/onboarding` before they can touch the rest of the app.
+  to `/onboarding` before they can touch the rest of the app — except `/admin`, which an
+  admin address can reach regardless of onboarded status (checked before that redirect).
 - **Concurrency**: seat capacity is claimed with an atomic
   `findOneAndUpdate({ seatsRemaining: { $gt: 0 } }, { $inc: { seatsRemaining: -1 } })` at
   accept-time (see `src/app/api/trips/[id]/requests/[requestId]/route.ts`) — this is
@@ -52,9 +55,17 @@ scope for V1 and what's explicitly deferred.
   add a second copy of its links to either trigger. `/trips/mine` and `/trips/requested`
   stay separate routes, tied together only by the `RidesTabs.tsx` link pair.
 - **Feedback categories** (`src/models/Feedback.ts`, `src/app/api/feedback/route.ts`,
-  `src/app/feedback/page.tsx`): a fixed enum kept in sync across all three files — there's no
-  admin UI, so every category (including `profile_correction`, see SPEC.md section 18) is
-  read directly out of Mongo by hand.
+  `src/app/feedback/page.tsx`): a fixed enum kept in sync across all three files — feedback
+  itself has no resolve/dismiss action yet (read-only in the admin dashboard, see below), so
+  every category (including `profile_correction`, see SPEC.md section 18) still ultimately
+  needs a manual look in Mongo to act on.
+- **Admin dashboard** (`src/app/admin/`, `src/app/api/admin/metrics/route.ts`, see SPEC.md
+  section 19): access is env-driven via `ADMIN_EMAILS` (`src/lib/admin.ts`), not a `User`
+  role — checked in the `signIn` callback, `src/middleware.ts`, and the metrics route itself.
+  All metrics are computed straight from MongoDB at request time; there's no dependency on
+  the PostHog integration. The money-saved figure is a modeled estimate
+  (`src/lib/adminMetrics.ts`) — read the doc comment before changing the formula, it's
+  unit-tested for a reason.
 
 ## Local setup
 
@@ -95,8 +106,9 @@ npm run dev
 4. Run `npm test` — a `mongodb-memory-server`-backed Vitest suite in `tests/` covers the
    accept/decline concurrency logic, request expiry, and the partial unique index (see
    `tests/tripRequests.test.ts`). No real MongoDB Atlas connection needed to run it.
-5. Add or update a test if you touch `src/lib/tripRequests.ts` or `src/lib/expireRequests.ts`
-   — these are the two places correctness actually matters (seat-race safety, expiry).
+5. Add or update a test if you touch `src/lib/tripRequests.ts`, `src/lib/expireRequests.ts`,
+   or `src/lib/adminMetrics.ts` — these are the places correctness actually matters
+   (seat-race safety, expiry, and a money-saved figure that needs to stay defensible).
 
 ## Good first issues
 
@@ -106,4 +118,7 @@ npm run dev
   variants for platforms that don't support SVG manifest icons) would help.
 - Bus last-mile leg matching (explicitly deferred in SPEC.md — open for discussion on design).
 - Netlify Scheduled Function equivalent of the Vercel Cron request-expiry sweep (see
-  DEPLOYMENT.md section 9) if Netlify becomes the primary deployment target.
+  DEPLOYMENT.md section 10) if Netlify becomes the primary deployment target.
+- A real admin UI for feedback (mark reviewed/resolved) and abuse-log review (unban a user
+  early) — today both are read-only in `/admin` (see SPEC.md section 19) and any action still
+  means editing MongoDB by hand.

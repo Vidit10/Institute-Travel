@@ -62,13 +62,27 @@ status lookups, paste into `AVIATIONSTACK_API_KEY`. Train tracking has no wired-
 yet (no good free option exists) — leave `RAILWAY_API_KEY` blank; the app falls back to the
 user's self-entered train number automatically.
 
-## 7. App icon (optional upgrade)
+## 7. Admin dashboard access (optional)
+
+Set `ADMIN_EMAILS` to a comma-separated list of email addresses that should be able to see
+the usage dashboard at `/admin`. Leave blank to disable the dashboard entirely. Sign-in and
+onboarding both work completely normally for a listed address — `ADMIN_EMAILS` only
+additionally unlocks `/admin`, it doesn't change anything else about the account.
+
+The env var also accepts non-`@iitdh.ac.in` addresses (it's an OR against the domain
+restriction, not a requirement), in case a future admin needs to use a personal account. In
+that case only: Google's account chooser is still hinted toward `@iitdh.ac.in` accounts (see
+`hd` param, step 2), so that admin may need to click "Use another account" on the Google
+sign-in screen rather than picking it directly. Doesn't apply if the admin address is itself
+`@iitdh.ac.in`.
+
+## 8. App icon (optional upgrade)
 
 `public/icon.svg` is a placeholder "CT" mark used by the manifest. It works fine for most
 browsers, but Android's install prompt looks better with real PNGs (192x192 and 512x512) —
 swap in a real logo later if you want.
 
-## 8. Deploy to Vercel
+## 9. Deploy to Vercel
 
 1. Push this repo to GitHub.
 2. Import it at https://vercel.com/new.
@@ -87,7 +101,7 @@ swap in a real logo later if you want.
 
 Once deployed, sign in with an `@iitdh.ac.in` account and you're live.
 
-## 9. Deploy to Netlify (secondary target)
+## 10. Deploy to Netlify (secondary target)
 
 Since Vercel is known to be flaky for some users on some networks, this repo also builds on
 Netlify via `netlify.toml` (uses `@netlify/plugin-nextjs`, already in `package.json`).

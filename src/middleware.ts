@@ -1,5 +1,6 @@
 import { withAuth } from "next-auth/middleware";
 import { NextResponse } from "next/server";
+import { isAdminEmail } from "@/lib/admin";
 
 export default withAuth(
   function middleware(req) {
@@ -7,6 +8,16 @@ export default withAuth(
     const token = req.nextauth.token;
 
     if (!token) return NextResponse.next();
+
+    const admin = isAdminEmail(token.email as string | undefined);
+
+    if (pathname.startsWith("/admin")) {
+      // Non-admin users (including regular students) never see the dashboard —
+      // enforced again server-side in every /api/admin/* route, this is just
+      // the redirect-before-render layer.
+      if (!admin) return NextResponse.redirect(new URL("/", req.url));
+      return NextResponse.next();
+    }
 
     const onboarded = token.onboarded as boolean | undefined;
 
@@ -30,5 +41,14 @@ export default withAuth(
 );
 
 export const config = {
-  matcher: ["/", "/onboarding", "/trips/:path*", "/settings", "/feedback", "/invite/:path*", "/arrivals"],
+  matcher: [
+    "/",
+    "/onboarding",
+    "/trips/:path*",
+    "/settings",
+    "/feedback",
+    "/invite/:path*",
+    "/arrivals",
+    "/admin/:path*",
+  ],
 };
