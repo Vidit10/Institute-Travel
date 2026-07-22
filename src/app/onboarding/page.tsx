@@ -23,12 +23,12 @@ function OnboardingForm() {
   const { update } = useSession();
   const router = useRouter();
   const searchParams = useSearchParams();
+  const [showIntro, setShowIntro] = useState(true);
   const [form, setForm] = useState({
     gender: "",
     phone: "",
     year: "",
     program: "UG",
-    nonEssentialEmailOptIn: true,
     contactShareDefaultConsent: true,
   });
   const [confirming, setConfirming] = useState(false);
@@ -59,6 +59,28 @@ function OnboardingForm() {
 
     await update(); // refreshes the JWT so middleware sees onboarded: true
     router.push(searchParams.get("next") || "/");
+  }
+
+  if (showIntro) {
+    return (
+      <main className="mx-auto max-w-md px-4 py-10">
+        <h1 className="text-xl font-bold">Welcome to CoRide 👋</h1>
+        <p className="mt-3 text-sm text-gray-600 dark:text-gray-300">
+          Instead of spamming five different WhatsApp groups hoping someone&apos;s travelling
+          at the same time as you, CoRide helps you find fellow students — from any batch —
+          heading the same way, so you can split a ride together.
+        </p>
+        <p className="mt-3 text-sm text-gray-600 dark:text-gray-300">
+          Be someone you&apos;d want to share a cab with.
+        </p>
+        <button
+          onClick={() => setShowIntro(false)}
+          className="mt-6 w-full rounded-lg bg-brand-600 px-4 py-3 font-medium text-white hover:bg-brand-700"
+        >
+          Let&apos;s get started
+        </button>
+      </main>
+    );
   }
 
   return (
@@ -102,7 +124,8 @@ function OnboardingForm() {
               placeholder="+91 90000 00000"
             />
             <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
-              Only shown to other riders after you both accept a trip request.
+              Only shown to other riders after you both accept a trip request. You&apos;ll
+              always be notified in-app and via push, never by email.
             </p>
           </div>
 
@@ -149,21 +172,6 @@ function OnboardingForm() {
             <input
               type="checkbox"
               className="mt-1"
-              checked={form.nonEssentialEmailOptIn}
-              onChange={(e) =>
-                setForm({ ...form, nonEssentialEmailOptIn: e.target.checked })
-              }
-            />
-            <span>
-              Send me occasional non-essential emails (tips, updates). You&apos;ll
-              always get essential emails like request accepted/declined regardless.
-            </span>
-          </label>
-
-          <label className="flex items-start gap-2 text-sm">
-            <input
-              type="checkbox"
-              className="mt-1"
               checked={form.contactShareDefaultConsent}
               onChange={(e) =>
                 setForm({ ...form, contactShareDefaultConsent: e.target.checked })
@@ -204,10 +212,6 @@ function OnboardingForm() {
               <div className="flex justify-between">
                 <dt className="text-gray-500 dark:text-gray-400">Year</dt>
                 <dd>{YEAR_LABELS[form.year] ?? form.year}</dd>
-              </div>
-              <div className="flex justify-between">
-                <dt className="text-gray-500 dark:text-gray-400">Non-essential emails</dt>
-                <dd>{form.nonEssentialEmailOptIn ? "Yes" : "No"}</dd>
               </div>
               <div className="flex justify-between">
                 <dt className="text-gray-500 dark:text-gray-400">Share phone by default</dt>

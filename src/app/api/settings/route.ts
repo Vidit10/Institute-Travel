@@ -11,8 +11,8 @@ const settingsSchema = z
     year: z.enum(YEARS),
     program: z.enum(PROGRAMS),
     phone: z.string().min(7).max(15),
-    nonEssentialEmailOptIn: z.boolean(),
     contactShareDefaultConsent: z.boolean(),
+    arrivalsGirlsOnlyDefault: z.boolean().optional(),
   })
   .refine((data) => (YEAR_OPTIONS_BY_PROGRAM[data.program] as readonly string[]).includes(data.year), {
     message: "Year doesn't match the selected program",
@@ -38,6 +38,14 @@ export async function PATCH(req: NextRequest) {
   }
 
   await dbConnect();
+  const existing = await User.findById(session.user.id);
+  if (parsed.data.arrivalsGirlsOnlyDefault && existing?.gender !== "female") {
+    return NextResponse.json(
+      { error: "Only accounts marked female can set this preference" },
+      { status: 403 }
+    );
+  }
+
   await User.findByIdAndUpdate(session.user.id, parsed.data);
   return NextResponse.json({ ok: true });
 }

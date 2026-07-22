@@ -62,15 +62,6 @@ status lookups, paste into `AVIATIONSTACK_API_KEY`. Train tracking has no wired-
 yet (no good free option exists) — leave `RAILWAY_API_KEY` blank; the app falls back to the
 user's self-entered train number automatically.
 
-## 6a. Transactional email (recommended — without it, notifications are push-only)
-
-1. Sign up at https://resend.com (free tier: 3,000 emails/month, no credit card).
-2. Create an API key, paste into `RESEND_API_KEY`.
-3. For real deliverability, verify your own domain in Resend and set `RESEND_FROM_EMAIL`
-   to an address on it (e.g. `Campus Travel <noreply@yourdomain.com>`). Until you do,
-   Resend's shared `onboarding@resend.dev` sender works for testing but isn't meant for
-   real users at scale.
-
 ## 7. App icon (optional upgrade)
 
 `public/icon.svg` is a placeholder "CT" mark used by the manifest. It works fine for most

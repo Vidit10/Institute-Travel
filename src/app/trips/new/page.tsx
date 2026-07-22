@@ -1,7 +1,7 @@
 "use client";
 
-import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { Suspense, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useSession } from "next-auth/react";
 import NavBar from "@/components/NavBar";
 import {
@@ -48,8 +48,23 @@ const HOURS_12 = Array.from({ length: 12 }, (_, i) => i + 1);
 const MODE_LABELS: Record<string, string> = { train: "Train", flight: "Flight", bus: "Bus" };
 
 export default function NewTripPage() {
+  return (
+    <Suspense fallback={null}>
+      <NewTripForm />
+    </Suspense>
+  );
+}
+
+function NewTripForm() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { data: session } = useSession();
+
+  // Prefill from the arrivals board's "Create a trip for this group" action.
+  const prefillPickup = searchParams.get("pickupLocation");
+  const prefillDeparture = searchParams.get("departureTime");
+  const prefillDate = prefillDeparture ? new Date(prefillDeparture) : null;
+
   const [form, setForm] = useState<{
     mode: string;
     vehicleType: string;
@@ -65,21 +80,31 @@ export default function NewTripPage() {
     companionEmails: string[];
     girlsOnly: boolean;
     expectedFare: string;
-  }>({
-    mode: "train",
-    vehicleType: "",
-    pickupLocation: DEFAULT_PICKUP_BY_MODE.train,
-    dateStr: "",
-    hour: 9,
-    minute: 0,
-    ampm: "AM",
-    trainNumber: "",
-    flightNumber: "",
-    totalCapacity: 3,
-    numTravelers: 1,
-    companionEmails: [],
-    girlsOnly: false,
-    expectedFare: "",
+  }>(() => {
+    const base = {
+      mode: "train",
+      vehicleType: "",
+      pickupLocation: (prefillPickup as string) || DEFAULT_PICKUP_BY_MODE.train,
+      dateStr: "",
+      hour: 9,
+      minute: 0,
+      ampm: "AM" as "AM" | "PM",
+      trainNumber: "",
+      flightNumber: "",
+      totalCapacity: 3,
+      numTravelers: 1,
+      companionEmails: [],
+      girlsOnly: false,
+      expectedFare: "",
+    };
+    if (prefillDate && !isNaN(prefillDate.getTime())) {
+      const hour24 = prefillDate.getHours();
+      base.dateStr = toDateInputValue(prefillDate);
+      base.hour = hour24 % 12 === 0 ? 12 : hour24 % 12;
+      base.minute = prefillDate.getMinutes();
+      base.ampm = hour24 >= 12 ? "PM" : "AM";
+    }
+    return base;
   });
   const [confirming, setConfirming] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -162,7 +187,7 @@ export default function NewTripPage() {
   return (
     <>
       <NavBar />
-      <main className="mx-auto max-w-md px-4 py-6">
+      <main className="mx-auto max-w-md px-4 py-6 pb-20 sm:pb-6">
         <h1 className="text-lg font-semibold">List a trip</h1>
 
         {!confirming ? (
@@ -379,8 +404,8 @@ export default function NewTripPage() {
             ))}
             {form.companionEmails.length > 0 && (
               <p className="-mt-2 text-xs text-gray-500 dark:text-gray-400">
-                If they already have an account, their seat is reserved instantly. If not, we&apos;ll
-                email them an invite link to confirm it.
+                If they already have an account, their seat is reserved instantly. If not, you&apos;ll
+                get a link after listing to share with them yourself (WhatsApp, text, etc.).
               </p>
             )}
 

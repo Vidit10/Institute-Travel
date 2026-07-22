@@ -19,3 +19,6 @@ Thumbs.db
 # Local tooling/config — not part of the app
 .claude/
 strip_claude.*
+
+# Personal blog-drafting notes — not part of the public project
+docs/PRODUCT_LOG.md

@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useCallback } from "react";
 import { useParams } from "next/navigation";
+import Link from "next/link";
 import NavBar from "@/components/NavBar";
 import LoadingScreen from "@/components/LoadingScreen";
 import { REFERENCE_FARES, YEAR_LABELS, PROGRAM_LABELS } from "@/lib/constants";
@@ -42,6 +43,7 @@ type TripDetail = {
   host: { name: string; year: string; program: string; phone: string | null };
   myRequest: { status: string } | null;
   requests: RequestSummary[];
+  pendingInvites: Array<{ email: string; inviteUrl: string }>;
 };
 
 export default function TripDetailPage() {
@@ -66,17 +68,26 @@ export default function TripDetailPage() {
     return (
       <>
         <NavBar />
-        <main className="mx-auto max-w-md px-4 py-6">
+        <main className="mx-auto max-w-md px-4 py-6 pb-20 sm:pb-6">
           <LoadingScreen />
         </main>
       </>
     );
   }
 
-  const { trip, isHost, host, myRequest, requests } = data;
+  const { trip, isHost, host, myRequest, requests, pendingInvites } = data;
   const expectedFare = trip.expectedFare || 0;
   const currentTravelers = trip.totalCapacity - trip.seatsRemaining;
   const perPersonShare = currentTravelers > 0 ? expectedFare / currentTravelers : expectedFare;
+
+  async function copyInviteLink(inviteUrl: string) {
+    try {
+      await navigator.clipboard.writeText(inviteUrl);
+      setMessage("Invite link copied — share it however you like.");
+    } catch {
+      setMessage("Couldn't copy automatically — long-press the link to copy it.");
+    }
+  }
 
   async function cancelTrip() {
     setBusy(true);
@@ -108,18 +119,24 @@ export default function TripDetailPage() {
 
   async function shareTrip() {
     const url = window.location.href;
-    const shareData = { title: "Join my trip on Campus Travel", url };
+    // The link is embedded in the text itself (not passed as a separate `url`
+    // field) — some share targets append their own url on top of it, which
+    // would otherwise duplicate the link.
+    const shareText = `Join ${host.name} travelling from ${trip.pickupLocation} to college on ${new Date(
+      trip.departureTime
+    ).toLocaleString()} on CoRide: ${url}`;
+
     if (navigator.share) {
       try {
-        await navigator.share(shareData);
+        await navigator.share({ title: "CoRide", text: shareText });
       } catch {
         // User cancelled the native share sheet — not an error.
       }
       return;
     }
     try {
-      await navigator.clipboard.writeText(url);
-      setShareLabel("Link copied!");
+      await navigator.clipboard.writeText(shareText);
+      setShareLabel("Message copied!");
       setTimeout(() => setShareLabel("Share this trip"), 2000);
     } catch {
       setShareLabel("Couldn't copy — copy the URL manually");
@@ -146,7 +163,7 @@ export default function TripDetailPage() {
   return (
     <>
       <NavBar />
-      <main className="mx-auto max-w-md px-4 py-6">
+      <main className="mx-auto max-w-md px-4 py-6 pb-20 sm:pb-6">
         {trip.status === "cancelled" && (
           <p className="mb-3 rounded-lg bg-red-50 px-4 py-2 text-sm text-red-600 dark:bg-red-950 dark:text-red-300">
             This trip was cancelled by the host.
@@ -209,7 +226,39 @@ export default function TripDetailPage() {
           {shareLabel}
         </button>
 
+        <Link
+          href={`/feedback?category=report&context=${encodeURIComponent(
+            `Trip ${trip.pickupLocation} → ${trip.destination}, hosted by ${host.name} (id: ${trip._id})`
+          )}`}
+          className="mt-2 block text-center text-xs text-gray-400 hover:underline dark:text-gray-500"
+        >
+          Report this trip
+        </Link>
+
         {message && <p className="mt-3 text-sm text-brand-600 dark:text-brand-500">{message}</p>}
+
+        {isHost && pendingInvites.length > 0 && (
+          <div className="mt-4 rounded-lg border border-gray-200 bg-white p-4 dark:border-gray-800 dark:bg-gray-900">
+            <h2 className="text-sm font-semibold">Waiting to confirm their seat</h2>
+            <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+              These co-travellers don&apos;t have an account yet — copy their link and share it
+              yourself (WhatsApp, text, etc.); this app doesn&apos;t send email.
+            </p>
+            <ul className="mt-2 space-y-2">
+              {pendingInvites.map((invite) => (
+                <li key={invite.email} className="flex items-center justify-between gap-2 text-sm">
+                  <span className="break-all text-gray-600 dark:text-gray-300">{invite.email}</span>
+                  <button
+                    onClick={() => copyInviteLink(invite.inviteUrl)}
+                    className="shrink-0 rounded bg-gray-200 px-3 py-1 text-xs hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600"
+                  >
+                    Copy link
+                  </button>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
 
         {isHost && trip.status !== "cancelled" && trip.status !== "completed" && (
           confirmingCancel ? (

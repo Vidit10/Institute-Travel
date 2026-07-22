@@ -34,18 +34,27 @@ scope for V1 and what's explicitly deferred.
   response if the requester is the host and the rider's request was accepted, or vice versa
   — see the visibility logic in `src/app/api/trips/[id]/route.ts`. Any change touching
   contact info must preserve this — don't just return the full user object.
-- **Notifications**: `src/lib/notify.ts` sends both Web Push (VAPID, `src/lib/webpush.ts`,
-  `public/sw.js`) and transactional email (`src/lib/email.ts`, via Resend's REST API) for
-  every essential event — request sent/accepted/declined/expired/trip cancelled. Both
-  channels are best-effort and swallow failures — a failed notification must never break
-  the underlying accept/decline/request flow. Email always sends regardless of a user's
-  non-essential-email toggle (that toggle only governs non-critical mail, which doesn't
-  exist yet) — don't gate calls to `notifyUser` behind it.
+- **Notifications**: `src/lib/notify.ts` sends Web Push (VAPID, `src/lib/webpush.ts`,
+  `public/sw.js`) for every essential event — request sent/accepted/declined/expired/trip
+  cancelled. Best-effort and swallows failures — a failed notification must never break
+  the underlying accept/decline/request flow. Push is the only notification channel; email
+  was removed as a communication medium entirely (see docs/SPEC.md section 16). The one
+  remaining use of `src/lib/email.ts` is the companion-invite claim-link email in
+  `src/lib/companionInvites.ts`, which is being replaced with a copyable link separately.
 - **Live tracking** (`src/app/api/tracking/route.ts`): best-effort only. If no API key is
   configured, or the provider call fails, it returns `{ live: false }` and the UI should
   fall back to the user's self-reported ETA/train/flight number — never show a broken state.
 - **Analytics**: `src/lib/analytics.ts` wraps PostHog server-side capture; no-ops silently
   if `POSTHOG_KEY` isn't set, so analytics is never a hard dependency for local dev.
+- **Navigation** (see SPEC.md section 17): `src/components/NavBar.tsx` renders a simplified
+  top nav on `sm`+ and mounts `BottomTabBar.tsx` (fixed, mobile-only) below it. Both surfaces
+  share one `AccountMenu.tsx` for Settings/My Rides/Sign out — extend that component, don't
+  add a second copy of its links to either trigger. `/trips/mine` and `/trips/requested`
+  stay separate routes, tied together only by the `RidesTabs.tsx` link pair.
+- **Feedback categories** (`src/models/Feedback.ts`, `src/app/api/feedback/route.ts`,
+  `src/app/feedback/page.tsx`): a fixed enum kept in sync across all three files — there's no
+  admin UI, so every category (including `profile_correction`, see SPEC.md section 18) is
+  read directly out of Mongo by hand.
 
 ## Local setup
 

@@ -2,7 +2,9 @@ import { NextRequest, NextResponse } from "next/server";
 import { dbConnect } from "@/lib/mongodb";
 import { JoinRequest } from "@/models/JoinRequest";
 import { Trip } from "@/models/Trip";
+import { ArrivalIntent } from "@/models/ArrivalIntent";
 import { notifyUser } from "@/lib/notify";
+import { ARRIVAL_INTENT_GRACE_MINUTES } from "@/lib/constants";
 
 // Marks pending requests past their expiresAt as "expired" and notifies each rider
 // exactly once (docs/SPEC.md section 5: "the rider is notified their request
@@ -49,8 +51,17 @@ export async function GET(req: NextRequest) {
     { status: "completed" }
   );
 
+  // Arrival-board entries past their own arrival time (plus a grace window)
+  // stop being useful signal — sweep them the same way as trips.
+  const arrivalCutoff = new Date(Date.now() - ARRIVAL_INTENT_GRACE_MINUTES * 60 * 1000);
+  const expiredArrivals = await ArrivalIntent.updateMany(
+    { status: "active", arrivalTime: { $lt: arrivalCutoff } },
+    { status: "expired" }
+  );
+
   return NextResponse.json({
     expired: toExpire.length,
     completed: completedResult.modifiedCount,
+    expiredArrivals: expiredArrivals.modifiedCount,
   });
 }

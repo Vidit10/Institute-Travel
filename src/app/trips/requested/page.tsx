@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import NavBar from "@/components/NavBar";
+import RidesTabs from "@/components/RidesTabs";
 import LoadingScreen from "@/components/LoadingScreen";
 
 type MyRequest = {
@@ -42,8 +43,9 @@ export default function RequestedTripsPage() {
   return (
     <>
       <NavBar />
-      <main className="mx-auto max-w-2xl px-4 py-6">
-        <h1 className="text-lg font-semibold">Trips you&apos;ve requested to join</h1>
+      <main className="mx-auto max-w-2xl px-4 py-6 pb-20 sm:pb-6">
+        <h1 className="text-lg font-semibold">My Rides</h1>
+        <RidesTabs />
 
         {loading && <LoadingScreen />}
         {!loading && requests.length === 0 && (

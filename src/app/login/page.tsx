@@ -48,7 +48,7 @@ function SignInButton() {
 export default function LoginPage() {
   return (
     <main className="flex min-h-screen flex-col items-center justify-center px-4 text-center">
-      <h1 className="text-2xl font-bold text-brand-700 dark:text-brand-500">Campus Travel</h1>
+      <h1 className="text-2xl font-bold text-brand-700 dark:text-brand-500">CoRide</h1>
       <p className="mt-2 text-gray-600 dark:text-gray-400">Campus travel, simplified — for IIT Dharwad.</p>
       <p className="mt-1 text-sm text-gray-500 dark:text-gray-500">Sign in with your @iitdh.ac.in Google account.</p>
       <Suspense fallback={null}>

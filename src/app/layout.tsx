@@ -4,10 +4,11 @@ import "./globals.css";
 import SessionProvider from "@/components/SessionProvider";
 import PostHogProvider from "@/components/PostHogProvider";
 import ThemeProvider from "@/components/ThemeProvider";
+import InstallPrompt from "@/components/InstallPrompt";
 
 export const metadata: Metadata = {
-  title: "Campus Travel — IIT Dharwad",
-  description: "Campus travel, simplified — for IIT Dharwad.",
+  title: "CoRide — IIT Dharwad",
+  description: "Ride-sharing for the IIT Dharwad student community.",
   manifest: "/manifest.json",
 };
 
@@ -31,6 +32,7 @@ export default function RootLayout({
           <SessionProvider>
             <PostHogProvider>
               {children}
+              <InstallPrompt />
               <footer className="mt-8 border-t border-gray-200 py-4 text-center text-xs text-gray-400 dark:border-gray-800 dark:text-gray-500">
                 <div className="flex flex-col items-center gap-2 sm:flex-row sm:justify-center sm:gap-4">
                   <span>Made with ❤️ — for the IIT Dharwad Fraternity</span>
@@ -48,6 +50,7 @@ export default function RootLayout({
                     </Link>
                   </div>
                 </div>
+                <p className="mt-1">Be someone you&apos;d want to share a cab with.</p>
               </footer>
             </PostHogProvider>
           </SessionProvider>

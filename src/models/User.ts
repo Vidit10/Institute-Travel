@@ -16,8 +16,11 @@ const userSchema = new Schema(
     program: { type: String, enum: PROGRAMS, required: false },
 
     // Settings — editable any time after onboarding.
-    nonEssentialEmailOptIn: { type: Boolean, default: true },
     contactShareDefaultConsent: { type: Boolean, default: true },
+    // Only meaningful for female users — pre-marks their arrival-board posts
+    // as girls-only by default so they don't have to re-toggle it every time
+    // (still overridable per-post on the arrivals form itself).
+    arrivalsGirlsOnlyDefault: { type: Boolean, default: false },
   },
   { timestamps: true }
 );

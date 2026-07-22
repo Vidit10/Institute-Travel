@@ -2,7 +2,6 @@ import crypto from "crypto";
 import { User } from "@/models/User";
 import { JoinRequest } from "@/models/JoinRequest";
 import { CompanionInvite } from "@/models/CompanionInvite";
-import { sendEmail } from "@/lib/email";
 import { INVITE_EXPIRY_DAYS } from "@/lib/constants";
 
 type Trip = {
@@ -13,18 +12,24 @@ type Trip = {
   departureTime: Date;
 };
 
+export type PendingInviteLink = { email: string; inviteUrl: string };
+
 // Resolves each companion email the host entered at trip creation: an existing
 // user is linked immediately (an auto-accepted JoinRequest — their seat was
 // already reserved via numTravelers, this just creates the record so they show
 // up like any other accepted rider and their contact info follows the same
 // consent-gated reveal logic). An email with no account gets a CompanionInvite
-// + an emailed claim link instead; claiming happens in the /invite/[token] route.
+// instead — claiming happens in the /invite/[token] route — and its link is
+// returned here so the caller can show the host a "copy & share this" button;
+// the app sends no email at all (product decision), so nothing gets sent
+// automatically to an unregistered companion.
 export async function resolveCompanions(
   trip: Trip,
   hostId: string,
   emails: string[]
-) {
+): Promise<PendingInviteLink[]> {
   const now = new Date();
+  const pendingLinks: PendingInviteLink[] = [];
 
   await Promise.all(
     emails.map(async (rawEmail) => {
@@ -63,13 +68,9 @@ export async function resolveCompanions(
       });
 
       const inviteUrl = `${process.env.NEXTAUTH_URL || "http://localhost:3000"}/invite/${token}`;
-      await sendEmail(
-        email,
-        "You've been added to a trip on Campus Travel",
-        `A fellow student added you as a co-traveller for a ride from ${trip.pickupLocation} to ${trip.destination}.\n\n` +
-          `Sign in with your @iitdh.ac.in account to confirm your seat:\n${inviteUrl}\n\n` +
-          `This link expires ${expiresAt.toLocaleString()}.`
-      );
+      pendingLinks.push({ email, inviteUrl });
     })
   );
+
+  return pendingLinks;
 }

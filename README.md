@@ -1,4 +1,4 @@
-# Campus Travel — simplified, for IIT Dharwad
+# CoRide — ride-sharing for IIT Dharwad students
 
 A lightweight, campus-only platform that helps IIT Dharwad students find each other when
 travelling to/from campus (train, flight, or bus) and split a cab — without the awkwardness

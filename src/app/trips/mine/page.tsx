@@ -3,7 +3,15 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import NavBar from "@/components/NavBar";
+import RidesTabs from "@/components/RidesTabs";
 import LoadingScreen from "@/components/LoadingScreen";
+
+const STATUS_LABELS: Record<string, string> = {
+  open: "Open",
+  full: "Fully booked",
+  cancelled: "Cancelled",
+  completed: "Completed",
+};
 
 type MyTrip = {
   _id: string;
@@ -31,8 +39,9 @@ export default function MyTripsPage() {
   return (
     <>
       <NavBar />
-      <main className="mx-auto max-w-2xl px-4 py-6">
-        <h1 className="text-lg font-semibold">Trips you&apos;re hosting</h1>
+      <main className="mx-auto max-w-2xl px-4 py-6 pb-20 sm:pb-6">
+        <h1 className="text-lg font-semibold">My Rides</h1>
+        <RidesTabs />
 
         {loading && <LoadingScreen />}
         {!loading && trips.length === 0 && (
@@ -54,7 +63,9 @@ export default function MyTripsPage() {
               >
                 <div className="flex flex-wrap items-center justify-between gap-2">
                   <span className="text-sm font-medium uppercase text-brand-600 dark:text-brand-500">{trip.mode}</span>
-                  <span className="text-xs text-gray-500 dark:text-gray-400">{trip.status}</span>
+                  <span className="text-xs text-gray-500 dark:text-gray-400">
+                    {STATUS_LABELS[trip.status] ?? trip.status}
+                  </span>
                 </div>
                 <p className="mt-1 break-words font-medium">
                   {trip.pickupLocation} → {trip.destination}

@@ -28,7 +28,6 @@ Collected once, editable later from Settings:
 | Phone number | string | shown to other users only after mutual consent on a specific trip |
 | Year | enum | e.g. 1st–4th (UG), 1st/2nd (PG) |
 | Program | enum | UG / PG |
-| Non-essential email notifications | boolean toggle | opt-in/opt-out at onboarding; **transactional emails (request accepted/declined) always send regardless of this toggle** |
 | Default contact-sharing consent | boolean | can be overridden per-trip |
 
 All of the above are editable later under **Settings**.
@@ -104,7 +103,8 @@ This can be upgraded to a paid tier later if usage justifies it — no rebuild r
 ## 10. Notifications
 
 - **Push** (web-push/VAPID via service worker, since this is a PWA) for time-critical events: new join request, request accepted/declined, request expiring soon.
-- **Email** for the same transactional events, always sent regardless of the user's non-essential-email toggle (that toggle only suppresses non-critical emails, e.g. digest/marketing-style messages, not "your ride was accepted").
+- **In-app notification bell** (polling, see section 15) surfaces the same events for users browsing without push enabled.
+- Push-only. Email is not a notification channel for this app (see section 16 — email was dropped as a communication medium entirely).
 
 ## 11. Analytics (PM metrics — personal use)
 
@@ -157,3 +157,50 @@ Superseding the relevant parts of sections 3, 6, 8, 9 above:
 - **Application-level rate limiting** (`src/lib/rateLimit.ts`, not network-level DDoS mitigation — that's the hosting platform's job): per-user sliding window (20 requests/minute) across the mutating endpoints (create trip, send/respond to a request, cancel a trip, submit feedback); exceeding it triggers a 15-minute lockout with a witty rejection message, logged to a separate `AbuseLog` collection.
 - **Loading screen**: a shared `LoadingScreen` component (spinner + a random rotating fact) replaces bare "Loading..." text across the app.
 - **Footer restructured**: "Made with ❤️ — for the IIT Dharwad Fraternity", plus GitHub and Feedback links moved here from the nav bar (nav bar no longer shows them).
+
+## 16. Email channel removed
+
+- **Decision: no email is sent by this app anymore.** Push (web-push/VAPID) remains the only notification channel — see section 10. The `nonEssentialEmailOptIn` onboarding/settings toggle was removed entirely since it no longer governs anything.
+- The one exception is the companion-invite flow, which no longer emails a claim link either — it now generates a copyable/shareable invite link instead (see the trip-creation companion-invite feature for details).
+
+## 17. Mobile-native navigation restructure
+
+The app is used on phones the large majority of the time, so navigation was rebuilt to follow
+native-mobile-app conventions on small screens rather than a shrunk-down desktop nav:
+
+- **Bottom tab bar** (below the `sm` breakpoint), replacing the top hamburger menu: Home,
+  Arrivals, a center elevated "List a trip" action, My Rides, Account. Fixed, always visible.
+- **Simplified desktop/tablet top nav**: `Brand | List a trip | 🔔 🌙 Account` — one primary
+  CTA instead of two competing ones, with low-frequency actions tucked into the Account item.
+- **"Who's arriving" dropped as a persistent nav item** — it's promoted via a banner on the
+  home page and reachable from the bottom tab bar's Arrivals tab, so a dedicated nav label
+  was redundant.
+- **`/trips/mine` and `/trips/requested` merged into one "My Rides" concept** (Hosting /
+  Requested tabs) — both routes still exist (a shared `RidesTabs` component just links
+  between them), fixing the naming ambiguity between "my trips" and "my requests" without a
+  data-layer change.
+- **One shared Account panel** (`src/components/AccountMenu.tsx`: My Rides, Settings, Sign
+  out) rendered as a desktop dropdown or a mobile bottom sheet depending on context — the
+  content lives in exactly one place so the two triggers can't drift apart.
+- **Home feed search collapsed** behind a "Search by time/location ▾" toggle instead of five
+  always-visible controls — most visits just need the banner + feed.
+- **Install prompt moved from fixed-bottom to fixed-top** (`src/components/InstallPrompt.tsx`),
+  since fixed-bottom now collides with the new tab bar.
+
+## 18. Locked-profile correction request flow
+
+Name and gender are locked after onboarding (section 14) with no self-serve edit path — but
+mistakes happen (a misclicked gender option, a name typo carried over from the Google
+profile), and there was previously no way to fix one short of a raw database edit requested
+outside the app.
+
+- **New feedback category, `profile_correction`** (`/feedback`): lets a user describe the
+  correct name/gender. The Settings page links to it directly next to the locked fields,
+  prefilling the context label with the user's current (wrong) values so whoever applies the
+  fix knows the before-state.
+- **No automated processing** — same as every other feedback category, this is read directly
+  in Mongo, not surfaced through an admin UI (see CONTRIBUTING.md's "Good first issues" for
+  the general admin-UI gap). The copy sets the expectation that a fix isn't instant: allow
+  24–48 hours for someone to apply it, and sign out and back in afterward so any part of the
+  UI still reading from the cached session (rather than a fresh `/api/settings` fetch) picks
+  up the new value.

@@ -8,8 +8,9 @@ import { track } from "@/lib/analytics";
 import { rateLimitOrRespond } from "@/lib/rateLimit";
 
 const feedbackSchema = z.object({
-  category: z.enum(["recommendation", "bug", "other"]),
+  category: z.enum(["recommendation", "bug", "report", "profile_correction", "other"]),
   message: z.string().min(1).max(2000),
+  contextLabel: z.string().max(200).optional(),
 });
 
 export async function POST(req: NextRequest) {
@@ -32,6 +33,7 @@ export async function POST(req: NextRequest) {
     userId: session.user.id,
     category: parsed.data.category,
     message: parsed.data.message,
+    contextLabel: parsed.data.contextLabel,
   });
 
   track(session.user.id, "feedback_submitted", { category: parsed.data.category });

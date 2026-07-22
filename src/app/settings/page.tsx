@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useSession } from "next-auth/react";
+import Link from "next/link";
 import NavBar from "@/components/NavBar";
 import LoadingScreen from "@/components/LoadingScreen";
 import { PROGRAMS, PROGRAM_LABELS, YEAR_OPTIONS_BY_PROGRAM, YEAR_LABELS } from "@/lib/constants";
@@ -14,8 +15,8 @@ export default function SettingsPage() {
     year: "",
     program: "UG",
     phone: "",
-    nonEssentialEmailOptIn: true,
     contactShareDefaultConsent: true,
+    arrivalsGirlsOnlyDefault: false,
   });
   const [loaded, setLoaded] = useState(false);
   const [saved, setSaved] = useState(false);
@@ -32,8 +33,8 @@ export default function SettingsPage() {
             year: user.year || "",
             program: user.program || "UG",
             phone: user.phone || "",
-            nonEssentialEmailOptIn: user.nonEssentialEmailOptIn,
             contactShareDefaultConsent: user.contactShareDefaultConsent,
+            arrivalsGirlsOnlyDefault: user.arrivalsGirlsOnlyDefault || false,
           });
         }
       })
@@ -69,7 +70,7 @@ export default function SettingsPage() {
   return (
     <>
       <NavBar />
-      <main className="mx-auto max-w-md px-4 py-6">
+      <main className="mx-auto max-w-md px-4 py-6 pb-20 sm:pb-6">
         <h1 className="text-lg font-semibold">Your profile</h1>
         <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
           {form.name} · {YEAR_LABELS[form.year] ?? form.year} · {PROGRAM_LABELS[form.program as keyof typeof PROGRAM_LABELS] ?? form.program}
@@ -100,6 +101,20 @@ export default function SettingsPage() {
               <option value="other">Other</option>
             </select>
           </div>
+
+          <p className="-mt-2 text-xs text-gray-500 dark:text-gray-400">
+            Name and gender are locked after onboarding. Filled in wrong?{" "}
+            <Link
+              href={`/feedback?category=profile_correction&context=${encodeURIComponent(
+                `Profile correction — name: "${form.name}", gender: "${form.gender}"`
+              )}`}
+              className="text-brand-600 underline dark:text-brand-500"
+            >
+              Send feedback
+            </Link>{" "}
+            with the correct details, then sign out and back in — allow 24–48 hours for it to
+            take effect.
+          </p>
 
           <div>
             <label className="block text-sm font-medium">
@@ -158,21 +173,26 @@ export default function SettingsPage() {
             <input
               type="checkbox"
               className="mt-1"
-              checked={form.nonEssentialEmailOptIn}
-              onChange={(e) => setForm({ ...form, nonEssentialEmailOptIn: e.target.checked })}
-            />
-            Send me occasional non-essential emails
-          </label>
-
-          <label className="flex items-start gap-2 text-sm">
-            <input
-              type="checkbox"
-              className="mt-1"
               checked={form.contactShareDefaultConsent}
               onChange={(e) => setForm({ ...form, contactShareDefaultConsent: e.target.checked })}
             />
             Share my phone number once a request is accepted
           </label>
+
+          {form.gender === "female" && (
+            <label className="flex items-start gap-2 text-sm">
+              <input
+                type="checkbox"
+                className="mt-1"
+                checked={form.arrivalsGirlsOnlyDefault}
+                onChange={(e) => setForm({ ...form, arrivalsGirlsOnlyDefault: e.target.checked })}
+              />
+              <span>
+                Default my arrivals-board posts to girls-only (you can still change it for
+                any individual post)
+              </span>
+            </label>
+          )}
 
           {error && <p className="text-sm text-red-600 dark:text-red-400">{error}</p>}
           {saved && <p className="text-sm text-brand-600 dark:text-brand-500">Saved.</p>}

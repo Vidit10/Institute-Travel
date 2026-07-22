@@ -5,9 +5,11 @@ import { authOptions } from "@/lib/auth";
 import { dbConnect } from "@/lib/mongodb";
 import { Trip } from "@/models/Trip";
 import { User } from "@/models/User";
+import { ArrivalIntent } from "@/models/ArrivalIntent";
 import { track } from "@/lib/analytics";
 import { resolveCompanions } from "@/lib/companionInvites";
 import { rateLimitOrRespond } from "@/lib/rateLimit";
+import { splitByProximity } from "@/lib/timeProximity";
 import {
   PICKUP_LOCATIONS,
   TRIP_MODES,
@@ -53,7 +55,13 @@ const createTripSchema = z
     }
   );
 
-export async function GET() {
+// Item 2 (search/filter): optional ?pickupLocation=&targetTime= narrow and
+// re-sort the feed. With both given, results split into "exact" (same
+// location, close in time) and "nearby" (same location, further out) using
+// the same proximity logic as the arrivals board. With only targetTime,
+// everything is just sorted by closeness (no location to group by). With
+// neither, behavior is unchanged — open trips in chronological order.
+export async function GET(req: NextRequest) {
   const session = await getServerSession(authOptions);
   if (!session?.user?.id) {
     return NextResponse.json({ error: "unauthorized" }, { status: 401 });
@@ -71,16 +79,38 @@ export async function GET() {
   // departure so a trip doesn't vanish the instant the clock ticks over.
   const gracePeriodCutoff = new Date(Date.now() - 30 * 60 * 1000);
 
-  const trips = await Trip.find({
+  const pickupLocation = req.nextUrl.searchParams.get("pickupLocation");
+  const targetTimeParam = req.nextUrl.searchParams.get("targetTime");
+  const targetTime = targetTimeParam ? new Date(targetTimeParam) : null;
+
+  const query: Record<string, unknown> = {
     status: "open",
     departureTime: { $gt: gracePeriodCutoff },
     ...visibilityFilter,
-  })
+  };
+  if (pickupLocation) query.pickupLocation = pickupLocation;
+
+  const tripsDocs = await Trip.find(query)
     .sort({ departureTime: 1 })
     .populate("hostId", "name year program")
     .lean();
 
-  return NextResponse.json({ trips });
+  if (!targetTime || isNaN(targetTime.getTime())) {
+    return NextResponse.json({ trips: tripsDocs });
+  }
+
+  const withTime = tripsDocs.map((t) => ({ ...t, time: new Date(t.departureTime) }));
+
+  if (pickupLocation) {
+    const { exact, nearby } = splitByProximity(withTime, targetTime);
+    return NextResponse.json({ exact, nearby });
+  }
+
+  // No location given — just sort everything by closeness, no exact/nearby split.
+  const sorted = [...withTime].sort(
+    (a, b) => Math.abs(a.time.getTime() - targetTime.getTime()) - Math.abs(b.time.getTime() - targetTime.getTime())
+  );
+  return NextResponse.json({ trips: sorted });
 }
 
 export async function POST(req: NextRequest) {
@@ -140,11 +170,19 @@ export async function POST(req: NextRequest) {
     status: seatsRemaining === 0 ? "full" : "open",
   });
 
+  // If this trip grew out of an arrivals-board entry, retire that entry so it
+  // doesn't keep showing as an open "looking for a group" signal.
+  await ArrivalIntent.updateMany(
+    { userId: host._id, pickupLocation: parsed.data.pickupLocation, status: "active" },
+    { status: "converted" }
+  );
+
+  let pendingInvites: Array<{ email: string; inviteUrl: string }> = [];
   if (companionEmails.length > 0) {
-    await resolveCompanions(trip, host._id.toString(), companionEmails);
+    pendingInvites = await resolveCompanions(trip, host._id.toString(), companionEmails);
   }
 
   track(session.user.id, "trip_created", { mode: parsed.data.mode });
 
-  return NextResponse.json({ trip }, { status: 201 });
+  return NextResponse.json({ trip, pendingInvites }, { status: 201 });
 }

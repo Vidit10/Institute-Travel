@@ -13,7 +13,6 @@ const onboardingSchema = z
     phone: z.string().min(7).max(15),
     year: z.enum(YEARS),
     program: z.enum(PROGRAMS),
-    nonEssentialEmailOptIn: z.boolean(),
     contactShareDefaultConsent: z.boolean(),
   })
   .refine((data) => (YEAR_OPTIONS_BY_PROGRAM[data.program] as readonly string[]).includes(data.year), {

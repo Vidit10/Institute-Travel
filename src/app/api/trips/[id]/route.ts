@@ -5,6 +5,7 @@ import { dbConnect } from "@/lib/mongodb";
 import { Trip } from "@/models/Trip";
 import { JoinRequest } from "@/models/JoinRequest";
 import { User } from "@/models/User";
+import { CompanionInvite } from "@/models/CompanionInvite";
 import { sweepExpired } from "@/lib/expireRequests";
 
 // Returns trip details. Host contact info is only included if the requester is
@@ -60,7 +61,20 @@ export async function GET(
 
   const hostContactVisible = isHost || myRequest?.status === "accepted";
 
+  // Host-only: any companion invites still waiting to be claimed, so the host
+  // can copy/re-share the link (no email is ever sent for this — item 6).
+  const pendingInvitesDocs = isHost
+    ? await CompanionInvite.find({ tripId: trip._id, status: "pending" }).lean()
+    : [];
+  const pendingInvites = (pendingInvitesDocs as unknown as Array<{ email: string; token: string }>).map(
+    (invite) => ({
+      email: invite.email,
+      inviteUrl: `${process.env.NEXTAUTH_URL || "http://localhost:3000"}/invite/${invite.token}`,
+    })
+  );
+
   return NextResponse.json({
+    pendingInvites,
     trip: { ...trip, hostId: undefined },
     isHost,
     host: {

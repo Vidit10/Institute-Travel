@@ -31,7 +31,7 @@ export default function InvitePage() {
   return (
     <>
       <NavBar />
-      <main className="mx-auto max-w-md px-4 py-10 text-center">
+      <main className="mx-auto max-w-md px-4 py-10 pb-20 text-center sm:pb-10">
         {state === "claiming" && <p className="text-gray-500 dark:text-gray-400">Confirming your seat...</p>}
         {state === "success" && (
           <p className="text-brand-600 dark:text-brand-500">You&apos;re in! Taking you to the trip...</p>
