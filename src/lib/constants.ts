@@ -31,6 +31,14 @@ export const TRIP_MODES = ["train", "flight", "bus"] as const;
 
 export const TRIP_STATUSES = ["open", "full", "cancelled", "completed"] as const;
 
+// A trip counts as "active" (for the per-host listing cap below) while it's
+// still joinable or full but not yet departed/cancelled.
+export const ACTIVE_TRIP_STATUSES = ["open", "full"] as const;
+
+// Keeps a host from accumulating an unbounded number of simultaneous
+// listings — cancel or let one complete before listing another.
+export const MAX_ACTIVE_TRIPS_PER_HOST = 5;
+
 export const REQUEST_STATUSES = ["pending", "accepted", "declined", "expired"] as const;
 
 // Fixed vehicle options for trip creation (replaces free-text entry).

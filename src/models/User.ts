@@ -10,7 +10,7 @@ const userSchema = new Schema(
 
     // Onboarding fields — required to be set before using the rest of the app.
     onboarded: { type: Boolean, default: false },
-    gender: { type: String, enum: ["female", "male", "other"], required: false },
+    gender: { type: String, enum: ["female", "male"], required: false },
     phone: { type: String, required: false },
     year: { type: String, enum: YEARS, required: false },
     program: { type: String, enum: PROGRAMS, required: false },

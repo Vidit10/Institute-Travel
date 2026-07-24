@@ -9,7 +9,7 @@ import { PROGRAMS, YEARS, YEAR_OPTIONS_BY_PROGRAM } from "@/lib/constants";
 
 const onboardingSchema = z
   .object({
-    gender: z.enum(["female", "male", "other"]),
+    gender: z.enum(["female", "male"]),
     phone: z.string().min(7).max(15),
     year: z.enum(YEARS),
     program: z.enum(PROGRAMS),

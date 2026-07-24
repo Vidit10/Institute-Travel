@@ -8,7 +8,6 @@ import { PROGRAMS, PROGRAM_LABELS, YEAR_OPTIONS_BY_PROGRAM, YEAR_LABELS } from "
 const GENDER_LABELS: Record<string, string> = {
   female: "Female",
   male: "Male",
-  other: "Other",
 };
 
 export default function OnboardingPage() {
@@ -107,7 +106,6 @@ function OnboardingForm() {
               </option>
               <option value="female">Female</option>
               <option value="male">Male</option>
-              <option value="other">Other</option>
             </select>
           </div>
 

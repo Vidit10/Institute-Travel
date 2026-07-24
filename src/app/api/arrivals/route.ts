@@ -98,9 +98,10 @@ const createSchema = z
     { message: `Arrival time must be in the future, within the next ${MAX_ADVANCE_HOURS / 24} days`, path: ["arrivalTime"] }
   );
 
-// Creates or replaces (upserts) the caller's own active entry for that
-// location — posting again at the same location updates it rather than
-// erroring on the unique-active-entry index.
+// Creates or replaces (upserts) the caller's one active entry — a person can
+// only be arriving at one place at a time, so posting at any location
+// replaces whatever was previously active, even if it was a different
+// location entirely.
 export async function POST(req: NextRequest) {
   const session = await getServerSession(authOptions);
   if (!session?.user?.id) {
@@ -128,7 +129,7 @@ export async function POST(req: NextRequest) {
   const girlsOnly = parsed.data.girlsOnly ?? (me?.gender === "female" && !!me?.arrivalsGirlsOnlyDefault);
 
   const entry = await ArrivalIntent.findOneAndUpdate(
-    { userId: session.user.id, pickupLocation: parsed.data.pickupLocation, status: "active" },
+    { userId: session.user.id, status: "active" },
     {
       userId: session.user.id,
       pickupLocation: parsed.data.pickupLocation,

@@ -15,6 +15,14 @@ so this is the morning-after checklist. Should take about 15–20 minutes total.
    `mongodb+srv://<user>:<password>@cluster0.xxxxx.mongodb.net/?retryWrites=true&w=majority`
 6. Paste it into `.env.local` (and later, Vercel env vars) as `MONGODB_URI`.
 
+**Free-tier headroom**: the M0 tier's 512MB cap comfortably covers this app for a long time
+— documents here run a few KB per user across every collection combined, so storage doesn't
+become a real constraint until roughly 8,000–15,000 users' worth of accumulated data, well
+past a single campus. If growth ever becomes a real concern, it'll show up first as latency
+under a concurrent spike (M0's 500-connection cap, shared CPU), not as running out of space
+— upgrade the cluster tier if that happens, rather than adding a data-deletion job (see
+CONTRIBUTING.md's architecture overview for why deleting historical data is a bad idea here).
+
 ## 2. Google OAuth client (free, ~5 min)
 
 1. Go to https://console.cloud.google.com/apis/credentials (create a new project if you

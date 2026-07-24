@@ -5,6 +5,7 @@ import Link from "next/link";
 import NavBar from "@/components/NavBar";
 import PushSubscribe from "@/components/PushSubscribe";
 import LoadingScreen from "@/components/LoadingScreen";
+import ArrivalForm, { type ArrivalEntry } from "@/components/ArrivalForm";
 import { PICKUP_LOCATIONS } from "@/lib/constants";
 
 type Trip = {
@@ -94,6 +95,33 @@ export default function HomePage() {
   const [filterAmpm, setFilterAmpm] = useState<"AM" | "PM">("AM");
   const [searchOpen, setSearchOpen] = useState(false);
 
+  const [arrivalsLoaded, setArrivalsLoaded] = useState(false);
+  // A person can only have one active arrival — API returns at most one.
+  const [myEntry, setMyEntry] = useState<ArrivalEntry | null>(null);
+  const [isFemale, setIsFemale] = useState(false);
+  const [girlsOnlyDefault, setGirlsOnlyDefault] = useState(false);
+  const [editingArrival, setEditingArrival] = useState(false);
+
+  const loadArrivalStatus = useCallback(() => {
+    fetch("/api/arrivals")
+      .then((r) => r.json())
+      .then((data) => {
+        setMyEntry(data.myEntries?.[0] || null);
+        setIsFemale(data.myProfile?.gender === "female");
+        setGirlsOnlyDefault(!!data.myProfile?.arrivalsGirlsOnlyDefault);
+      })
+      .finally(() => setArrivalsLoaded(true));
+  }, []);
+
+  useEffect(() => {
+    loadArrivalStatus();
+  }, [loadArrivalStatus]);
+
+  function handleArrivalPosted() {
+    setEditingArrival(false);
+    loadArrivalStatus();
+  }
+
   const loadDefault = useCallback(() => {
     setLoading(true);
     fetch("/api/trips")
@@ -153,17 +181,63 @@ export default function HomePage() {
       <PushSubscribe />
       <NavBar />
       <main className="mx-auto max-w-2xl px-4 py-6 pb-20 sm:pb-6">
-        <Link
-          href="/arrivals"
-          className="block rounded-lg border border-brand-200 bg-brand-50 p-3 text-sm hover:border-brand-300 dark:border-brand-900 dark:bg-brand-950 dark:hover:border-brand-800"
-        >
-          <span className="font-medium text-brand-700 dark:text-brand-400">
-            Not sure who&apos;s travelling with you yet?
-          </span>{" "}
-          <span className="text-brand-600 dark:text-brand-500">
-            See who else is arriving when you are →
-          </span>
-        </Link>
+        <section className="rounded-lg border border-brand-200 bg-brand-50 p-4 dark:border-brand-900 dark:bg-brand-950">
+          {!arrivalsLoaded ? (
+            <div className="h-16" aria-hidden />
+          ) : myEntry ? (
+            <>
+              <p className="font-medium text-brand-700 dark:text-brand-400">
+                Not sure who you&apos;re travelling with yet? Here&apos;s where you stand:
+              </p>
+              <div className="mt-2 flex items-center justify-between gap-2 rounded-md bg-white/60 px-3 py-2 text-sm dark:bg-black/20">
+                <span className="text-gray-700 dark:text-gray-200">
+                  You&apos;re arriving at <strong>{myEntry.pickupLocation}</strong> around{" "}
+                  {new Date(myEntry.arrivalTime).toLocaleString()}
+                </span>
+                <button
+                  onClick={() => setEditingArrival((e) => !e)}
+                  className="shrink-0 text-xs text-brand-700 hover:underline dark:text-brand-400"
+                >
+                  Change
+                </button>
+              </div>
+              {editingArrival && (
+                <div className="mt-2 rounded-md bg-white/60 p-3 dark:bg-black/20">
+                  <ArrivalForm
+                    initialEntry={myEntry}
+                    isFemale={isFemale}
+                    defaultGirlsOnly={girlsOnlyDefault}
+                    submitLabel="Update my arrival"
+                    onSuccess={handleArrivalPosted}
+                  />
+                </div>
+              )}
+              <Link
+                href="/arrivals"
+                className="mt-2 inline-block text-sm text-brand-600 hover:underline dark:text-brand-500"
+              >
+                See who else is arriving when you are →
+              </Link>
+            </>
+          ) : (
+            <>
+              <p className="font-medium text-brand-700 dark:text-brand-400">
+                Not sure who&apos;s travelling with you yet?
+              </p>
+              <p className="mt-1 text-sm text-brand-600 dark:text-brand-500">
+                Log your arrival time below and see who else is around — it takes a few
+                seconds, and you can turn it into a real listing once you know your group.
+              </p>
+              <div className="mt-3">
+                <ArrivalForm
+                  isFemale={isFemale}
+                  defaultGirlsOnly={girlsOnlyDefault}
+                  onSuccess={handleArrivalPosted}
+                />
+              </div>
+            </>
+          )}
+        </section>
 
         <h1 className="mt-4 text-lg font-semibold">Upcoming trips</h1>
 

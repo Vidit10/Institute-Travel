@@ -15,6 +15,8 @@ import {
   TRIP_MODES,
   VEHICLE_TYPES,
   MAX_ADVANCE_HOURS,
+  ACTIVE_TRIP_STATUSES,
+  MAX_ACTIVE_TRIPS_PER_HOST,
 } from "@/lib/constants";
 
 const createTripSchema = z
@@ -127,6 +129,19 @@ export async function POST(req: NextRequest) {
   const host = await User.findById(session.user.id);
   if (!host?.onboarded) {
     return NextResponse.json({ error: "complete onboarding first" }, { status: 403 });
+  }
+
+  const activeTripCount = await Trip.countDocuments({
+    hostId: host._id,
+    status: { $in: ACTIVE_TRIP_STATUSES },
+  });
+  if (activeTripCount >= MAX_ACTIVE_TRIPS_PER_HOST) {
+    return NextResponse.json(
+      {
+        error: `You already have ${MAX_ACTIVE_TRIPS_PER_HOST} active trips — cancel one or wait for one to complete before listing another.`,
+      },
+      { status: 400 }
+    );
   }
 
   const parsed = createTripSchema.safeParse(await req.json());

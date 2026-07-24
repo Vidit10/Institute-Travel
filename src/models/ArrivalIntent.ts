@@ -23,10 +23,11 @@ const arrivalIntentSchema = new Schema(
   { timestamps: true }
 );
 
-// One active entry per user per location — re-posting at a new time replaces
-// rather than duplicates (edit by withdrawing + re-creating, kept simple).
+// One active entry per user, full stop — a person can only be arriving at
+// one place at a time. Posting again (at the same location or a different
+// one) replaces the existing active entry rather than adding a second.
 arrivalIntentSchema.index(
-  { userId: 1, pickupLocation: 1 },
+  { userId: 1 },
   { unique: true, partialFilterExpression: { status: "active" } }
 );
 

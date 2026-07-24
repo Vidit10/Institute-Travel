@@ -1,14 +1,14 @@
 "use client";
 
-import { Suspense, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useSession } from "next-auth/react";
+import Link from "next/link";
 import NavBar from "@/components/NavBar";
 import {
   PICKUP_LOCATIONS,
   TRIP_MODES,
   VEHICLE_TYPES,
-  REFERENCE_FARES,
   RECOMMENDED_CAPACITY,
   MAX_ADVANCE_DAYS,
   MINUTE_OPTIONS,
@@ -46,6 +46,14 @@ const maxDateStr = toDateInputValue(new Date(today.getTime() + MAX_ADVANCE_DAYS 
 const HOURS_12 = Array.from({ length: 12 }, (_, i) => i + 1);
 
 const MODE_LABELS: Record<string, string> = { train: "Train", flight: "Flight", bus: "Bus" };
+
+type SimilarTrip = {
+  _id: string;
+  pickupLocation: string;
+  departureTime: string;
+  mode: string;
+  hostId?: { name: string };
+};
 
 export default function NewTripPage() {
   return (
@@ -114,6 +122,34 @@ function NewTripForm() {
   const fareNumber = Number(form.expectedFare) || 0;
   const perPersonShare = form.numTravelers > 0 ? fareNumber / form.numTravelers : 0;
   const departureDate = buildDepartureDate(form.dateStr, form.hour, form.minute, form.ampm);
+
+  const [similarTrips, setSimilarTrips] = useState<SimilarTrip[]>([]);
+  const [similarDismissed, setSimilarDismissed] = useState(false);
+
+  // Nudge, not a gate: once location + a real future date/time are set,
+  // check for existing open trips around the same time — reuses the same
+  // proximity search the home feed's own filter already calls, no new
+  // backend logic. Debounced so it doesn't fire on every keystroke, and
+  // skipped once the user has moved past the initial form step.
+  useEffect(() => {
+    if (confirming || !departureDate || departureDate.getTime() <= Date.now()) {
+      setSimilarTrips([]);
+      return;
+    }
+    setSimilarDismissed(false);
+    const params = new URLSearchParams({
+      pickupLocation: form.pickupLocation,
+      targetTime: departureDate.toISOString(),
+    });
+    const timeout = setTimeout(() => {
+      fetch(`/api/trips?${params.toString()}`)
+        .then((r) => (r.ok ? r.json() : null))
+        .then((data) => setSimilarTrips(data?.exact || []))
+        .catch(() => {});
+    }, 500);
+    return () => clearTimeout(timeout);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [form.pickupLocation, form.dateStr, form.hour, form.minute, form.ampm, confirming]);
 
   function updateCompanionCount(numTravelers: number) {
     const companionCount = Math.max(0, numTravelers - 1);
@@ -340,6 +376,36 @@ function NewTripForm() {
               </p>
             </div>
 
+            {similarTrips.length > 0 && !similarDismissed && (
+              <div className="rounded-lg border border-brand-200 bg-brand-50 p-3 text-sm dark:border-brand-900 dark:bg-brand-950">
+                <div className="flex items-start justify-between gap-2">
+                  <p className="text-brand-700 dark:text-brand-400">
+                    {similarTrips.length === 1 ? "A trip" : `${similarTrips.length} trips`} from{" "}
+                    {form.pickupLocation} around this time already exist{similarTrips.length === 1 ? "s" : ""} —
+                    worth checking before listing your own?
+                  </p>
+                  <button
+                    type="button"
+                    onClick={() => setSimilarDismissed(true)}
+                    className="shrink-0 text-brand-600 hover:text-brand-800 dark:text-brand-500 dark:hover:text-brand-300"
+                    aria-label="Dismiss"
+                  >
+                    ×
+                  </button>
+                </div>
+                <ul className="mt-2 space-y-1">
+                  {similarTrips.slice(0, 3).map((t) => (
+                    <li key={t._id}>
+                      <Link href={`/trips/${t._id}`} className="text-brand-600 underline dark:text-brand-500">
+                        {MODE_LABELS[t.mode] || t.mode} · {new Date(t.departureTime).toLocaleString()}
+                        {t.hostId?.name ? ` · hosted by ${t.hostId.name}` : ""}
+                      </Link>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+
             <div>
               <label className="block text-sm font-medium">
                 Total capacity (incl. you) <span className="text-red-500">*</span>
@@ -423,11 +489,6 @@ function NewTripForm() {
                 value={form.expectedFare}
                 onChange={(e) => setForm({ ...form, expectedFare: e.target.value })}
               />
-              {REFERENCE_FARES[form.pickupLocation] && (
-                <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
-                  Typical full-vehicle fare from {form.pickupLocation}: {REFERENCE_FARES[form.pickupLocation]} (estimate)
-                </p>
-              )}
               {fareNumber > 0 && (
                 <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
                   Your current share: ₹{perPersonShare.toFixed(0)} each ({form.numTravelers}{" "}

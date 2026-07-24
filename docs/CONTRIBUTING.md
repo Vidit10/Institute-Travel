@@ -21,6 +21,17 @@ scope for V1 and what's explicitly deferred.
   - `JoinRequest` — a rider's request to join a trip (pending/accepted/declined/expired)
   - `PushSubscription` — web-push endpoints per user
   - `AbuseLog` — rate-limit lockout records (see the rate-limiting bullet below)
+  - **No data-deletion cron, and don't add one for "cleanup."** The existing cron
+    (`src/app/api/cron/expire-requests/route.ts`) only ever flips status
+    (`pending`→`expired`, `open`→`completed`) — nothing in this app deletes historical
+    documents. On the free M0 tier (512MB), this app's documents stay small enough (a few
+    KB per user across every collection combined) that storage isn't a real constraint until
+    somewhere around 8,000–15,000 users' worth of accumulated data — well past a single
+    campus's population, indefinitely. More importantly, the admin dashboard's totals and
+    trend charts (below) are sums over that same historical `Trip`/`JoinRequest` data —
+    deleting "old" rows would quietly corrupt the exact numbers that dashboard exists to
+    report. If a real constraint ever shows up, it'll be the 500-connection cap or shared
+    CPU under a concurrent traffic spike, not storage.
 - **Auth**: Auth.js (`next-auth`) with the Google provider, restricted server-side to
   `@iitdh.ac.in` emails (or an address listed in `ADMIN_EMAILS`, see below) in
   `src/lib/auth.ts` — the `hd` param on the provider is just a UX hint to Google's account
