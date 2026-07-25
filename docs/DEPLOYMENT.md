@@ -26,9 +26,9 @@ CONTRIBUTING.md's architecture overview for why deleting historical data is a ba
 ## 2. Google OAuth client (free, ~5 min)
 
 1. Go to https://console.cloud.google.com/apis/credentials (create a new project if you
-   don't have one — name it something like "Campus Travel").
+   don't have one — name it something like "CoRide").
 2. Configure the OAuth consent screen first if prompted: External user type is fine, app
-   name "Campus Travel", your email as support/contact. You don't need Google verification
+   name "CoRide", your email as support/contact. You don't need Google verification
    for a small user base initially (a warning screen shows until verified — acceptable for
    a campus tool, or apply for verification later once this has more users).
 3. Create **Credentials → OAuth client ID → Web application**.
@@ -70,33 +70,19 @@ status lookups, paste into `AVIATIONSTACK_API_KEY`. Train tracking has no wired-
 yet (no good free option exists) — leave `RAILWAY_API_KEY` blank; the app falls back to the
 user's self-entered train number automatically.
 
-## 7. Admin dashboard access (optional)
+## 7. App icon (optional upgrade)
 
-Set `ADMIN_EMAILS` to a comma-separated list of email addresses that should be able to see
-the usage dashboard at `/admin`. Leave blank to disable the dashboard entirely. Sign-in and
-onboarding both work completely normally for a listed address — `ADMIN_EMAILS` only
-additionally unlocks `/admin`, it doesn't change anything else about the account.
-
-The env var also accepts non-`@iitdh.ac.in` addresses (it's an OR against the domain
-restriction, not a requirement), in case a future admin needs to use a personal account. In
-that case only: Google's account chooser is still hinted toward `@iitdh.ac.in` accounts (see
-`hd` param, step 2), so that admin may need to click "Use another account" on the Google
-sign-in screen rather than picking it directly. Doesn't apply if the admin address is itself
-`@iitdh.ac.in`.
-
-## 8. App icon (optional upgrade)
-
-`public/icon.svg` is a placeholder "CT" mark used by the manifest. It works fine for most
+`public/icon.svg` is a placeholder mark used by the manifest. It works fine for most
 browsers, but Android's install prompt looks better with real PNGs (192x192 and 512x512) —
 swap in a real logo later if you want.
 
-## 9. Deploy to Vercel
+## 8. Deploy to Vercel
 
 1. Push this repo to GitHub.
 2. Import it at https://vercel.com/new.
 3. Add every env var from your `.env.local` into the Vercel project's **Environment
    Variables** settings (Production + Preview).
-4. Set `NEXTAUTH_URL` to your real Vercel URL (e.g. `https://campus-travel.vercel.app`).
+4. Set `NEXTAUTH_URL` to your real Vercel URL (e.g. `https://coride.vercel.app`).
 5. Deploy. Then go back to the Google Cloud Console and add the real callback URL (step 2
    above) — Google login will fail with a redirect_uri_mismatch error until you do this.
 6. If using the request-expiry cron (`vercel.json`), also set `CRON_SECRET` to a random
@@ -109,7 +95,7 @@ swap in a real logo later if you want.
 
 Once deployed, sign in with an `@iitdh.ac.in` account and you're live.
 
-## 10. Deploy to Netlify (secondary target)
+## 9. Deploy to Netlify (secondary target)
 
 Since Vercel is known to be flaky for some users on some networks, this repo also builds on
 Netlify via `netlify.toml` (uses `@netlify/plugin-nextjs`, already in `package.json`).
