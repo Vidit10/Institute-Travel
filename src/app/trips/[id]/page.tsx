@@ -6,7 +6,15 @@ import Link from "next/link";
 import NavBar from "@/components/NavBar";
 import LoadingScreen from "@/components/LoadingScreen";
 import ShareCTA from "@/components/ShareCTA";
-import { REFERENCE_FARES, YEAR_LABELS, PROGRAM_LABELS } from "@/lib/constants";
+import { REFERENCE_FARES, YEAR_LABELS, PROGRAM_LABELS, REQUEST_EXPIRY_HOURS } from "@/lib/constants";
+
+// Mirrors the server's real rule (src/app/api/trips/[id]/requests/route.ts):
+// whichever comes first, the configured window or the trip's own departure.
+function expectedExpiry(departureTime: string): Date {
+  const windowExpiry = new Date(Date.now() + REQUEST_EXPIRY_HOURS * 60 * 60 * 1000);
+  const departure = new Date(departureTime);
+  return departure < windowExpiry ? departure : windowExpiry;
+}
 
 function formatYearProgram(year: string, program: string) {
   const yearLabel = YEAR_LABELS[year] ?? year;
@@ -20,6 +28,7 @@ type RequestSummary = {
   _id: string;
   status: string;
   createdAt: string;
+  expiresAt: string;
   rider: { name: string; year: string; program: string; phone: string | null };
 };
 
@@ -42,7 +51,7 @@ type TripDetail = {
   };
   isHost: boolean;
   host: { name: string; year: string; program: string; phone: string | null };
-  myRequest: { status: string } | null;
+  myRequest: { status: string; expiresAt: string } | null;
   requests: RequestSummary[];
   pendingInvites: Array<{ email: string; inviteUrl: string }>;
 };
@@ -312,17 +321,28 @@ function TripDetailContent() {
         )}
 
         {!isHost && !myRequest && trip.status === "open" && trip.seatsRemaining > 0 && (
-          <button
-            onClick={sendRequest}
-            disabled={busy}
-            className="mt-4 w-full rounded-lg bg-brand-600 px-4 py-3 font-medium text-white hover:bg-brand-700 disabled:opacity-50"
-          >
-            Request to join
-          </button>
+          <>
+            <button
+              onClick={sendRequest}
+              disabled={busy}
+              className="mt-4 w-full rounded-lg bg-brand-600 px-4 py-3 font-medium text-white hover:bg-brand-700 disabled:opacity-50"
+            >
+              Request to join
+            </button>
+            <p className="mt-1 text-center text-xs text-gray-500 dark:text-gray-400">
+              If the host doesn&apos;t respond by {expectedExpiry(trip.departureTime).toLocaleString()}, it&apos;ll
+              auto-expire and you can look elsewhere.
+            </p>
+          </>
         )}
         {myRequest && (
           <p className="mt-4 rounded-lg bg-gray-100 px-4 py-3 text-sm text-gray-600 dark:bg-gray-800 dark:text-gray-300">
             Your request status: <span className="font-medium">{myRequest.status}</span>
+            {myRequest.status === "pending" && (
+              <span className="block text-xs text-gray-500 dark:text-gray-400">
+                Expires {new Date(myRequest.expiresAt).toLocaleString()} if the host doesn&apos;t respond.
+              </span>
+            )}
           </p>
         )}
 
@@ -336,7 +356,11 @@ function TripDetailContent() {
                   <p className="text-xs text-gray-500 dark:text-gray-400">{formatYearProgram(r.rider.year, r.rider.program)} · {r.status}</p>
                   {r.rider.phone && <p className="mt-1 text-sm text-brand-600 dark:text-brand-500">{r.rider.phone}</p>}
                   {r.status === "pending" && (
-                    <div className="mt-2 flex gap-2">
+                    <>
+                      <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                        Expires {new Date(r.expiresAt).toLocaleString()} if you don&apos;t respond
+                      </p>
+                      <div className="mt-2 flex gap-2">
                       <button
                         onClick={() => respond(r._id, "accept")}
                         disabled={busy}
@@ -351,7 +375,8 @@ function TripDetailContent() {
                       >
                         Decline
                       </button>
-                    </div>
+                      </div>
+                    </>
                   )}
                 </li>
               ))}

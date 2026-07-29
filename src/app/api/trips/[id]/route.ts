@@ -41,7 +41,7 @@ export async function GET(
     tripId: trip._id,
     riderId: session.user.id,
   }).lean();
-  const myRequest = myRequestDoc as unknown as { status: string } | null;
+  const myRequest = myRequestDoc as unknown as { status: string; expiresAt: string } | null;
 
   const requestsDocs = isHost
     ? await JoinRequest.find({ tripId: trip._id })
@@ -52,6 +52,7 @@ export async function GET(
     _id: string;
     status: string;
     createdAt: string;
+    expiresAt: string;
     riderId: { _id: string; name: string; year: string; program: string; phone: string; contactShareDefaultConsent: boolean };
   }>;
 
@@ -93,6 +94,7 @@ export async function GET(
         _id: r._id,
         status: r.status,
         createdAt: r.createdAt,
+        expiresAt: r.expiresAt,
         rider: {
           name: rider.name,
           year: rider.year,

@@ -3,7 +3,7 @@
 import { Suspense, useState } from "react";
 import { useSession } from "next-auth/react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { PROGRAMS, PROGRAM_LABELS, YEAR_OPTIONS_BY_PROGRAM, YEAR_LABELS } from "@/lib/constants";
+import { PROGRAMS, PROGRAM_LABELS, YEAR_OPTIONS_BY_PROGRAM, YEAR_LABELS, REQUEST_EXPIRY_HOURS } from "@/lib/constants";
 
 const GENDER_LABELS: Record<string, string> = {
   female: "Female",
@@ -71,6 +71,12 @@ function OnboardingForm() {
         </p>
         <p className="mt-3 text-sm text-gray-600 dark:text-gray-300">
           Be someone you&apos;d want to share a cab with.
+        </p>
+        <p className="mt-3 text-sm text-gray-600 dark:text-gray-300">
+          A quick heads-up: when you request to join a trip, that request is typically valid
+          for {REQUEST_EXPIRY_HOURS} hours (or until the trip departs, if that&apos;s sooner) —
+          if the host doesn&apos;t respond in time, it auto-expires and you&apos;re free to look
+          elsewhere.
         </p>
         <button
           onClick={() => setShowIntro(false)}

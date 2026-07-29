@@ -76,8 +76,9 @@ afterward once it's applied.
 5. Only on **accept**: phone numbers are revealed between host and that specific rider
    (subject to each user's contact-sharing consent setting), and the trip's remaining-seats
    count is atomically decremented.
-6. **Requests auto-expire** (currently 6 hours) if the host never responds — the rider is
-   notified their request expired so they can look elsewhere instead of assuming they're in.
+6. **Requests auto-expire** (currently 15 hours, or the trip's departure time if sooner) if
+   the host never responds — the rider is notified their request expired so they can look
+   elsewhere instead of assuming they're in.
 
 This flow depends on the host being notified and responsive quickly, since everything is
 time-sensitive (a train doesn't wait). Push notifications and expiry are load-bearing for

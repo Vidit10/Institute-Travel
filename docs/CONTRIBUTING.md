@@ -60,7 +60,11 @@ scope and what's explicitly deferred.
   departed trips to `completed`, and — for trips *newly* flipped to `completed` in that same
   run — pushes a post-trip review nudge to the host and every accepted rider. It finds
   candidates before updating them (not a blind `updateMany`) specifically so it knows which
-  trips are newly completed and doesn't re-notify on every subsequent cron run.
+  trips are newly completed and doesn't re-notify on every subsequent cron run. Triggered two
+  ways: `vercel.json`'s once-daily Vercel Cron (a safety net — Hobby plan doesn't allow more
+  frequent schedules) and a GitHub Actions workflow
+  (`.github/workflows/expire-requests-cron.yml`) hitting the same endpoint every 15 minutes
+  for the real-time cadence — see DEPLOYMENT.md.
 - **Live tracking** (`src/app/api/tracking/route.ts`): best-effort only. If no API key is
   configured, or the provider call fails, it returns `{ live: false }` and the UI should
   fall back to the user's self-reported ETA/train/flight number — never show a broken state.
@@ -162,5 +166,6 @@ npm run dev
 - Real app icons — `public/icon.svg` is a placeholder mark; a proper logo (and PNG
   variants for platforms that don't support SVG manifest icons) would help.
 - Bus last-mile leg matching (explicitly deferred in SPEC.md — open for discussion on design).
-- Netlify Scheduled Function equivalent of the Vercel Cron request-expiry sweep (see
-  DEPLOYMENT.md) if Netlify becomes the primary deployment target.
+- ~~Netlify Scheduled Function equivalent of the Vercel Cron request-expiry sweep~~ — solved
+  via a platform-agnostic GitHub Actions workflow instead (`.github/workflows/expire-requests-cron.yml`,
+  see DEPLOYMENT.md) that works on any deployment target.

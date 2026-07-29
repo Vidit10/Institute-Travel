@@ -173,8 +173,12 @@ export const LOCAL_RECOMMENDED_CAPACITY: Record<string, number> = {
   "Tum Tum": 10,
 };
 
-// How long a join request stays pending before auto-expiring if the host doesn't respond.
-export const REQUEST_EXPIRY_HOURS = 6;
+// How long a join request stays pending before auto-expiring if the host doesn't
+// respond — the real expiry is min(trip.departureTime, now + this), so it's only
+// ever the binding constraint when the trip departs further out than this. 15h
+// covers a full night's sleep (e.g. a request at 1 AM shouldn't expire before an
+// 8 AM host wakes up) — 6h was too easy to blow past overnight.
+export const REQUEST_EXPIRY_HOURS = 15;
 
 // A trip's departure can't be scheduled further out than this — up to a month
 // ahead, not a general far-future-scheduling tool.
