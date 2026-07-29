@@ -80,13 +80,14 @@ scope and what's explicitly deferred.
   second copy of its links to either trigger. `/trips/mine` and `/trips/requested` stay
   separate routes, tied together only by the `RidesTabs.tsx` link pair.
 - **Arrivals board** (`src/models/ArrivalIntent.ts`, `src/components/ArrivalForm.tsx`,
-  `src/app/arrivals/`): a person can only have **one active entry at a time**, enforced by a
-  partial unique index on `{ userId }` (not per-location) — posting again, even at a
-  different location, replaces the existing entry rather than adding a second. The form
-  component is shared between the home page and `/arrivals`; don't duplicate its fields or
-  submit logic in either place. `ArrivalForm` also takes a `quickMode` prop (skips the
-  date/time picker, posts ~10 minutes out) used by the beta "arriving right now" flow —
-  same backend, no separate endpoint.
+  `src/components/ArrivalsBoard.tsx`): a person can only have **one active entry at a time**,
+  enforced by a partial unique index on `{ userId }` (not per-location) — posting again, even
+  at a different location or a different direction/listingType, replaces the existing entry
+  rather than adding a second. There is no standalone `/arrivals` route — `ArrivalsBoard` is
+  mounted three times directly on the home page (`src/app/page.tsx`), one instance per
+  section; don't duplicate its browsing/posting logic in a new page instead of adding a prop
+  to it. `ArrivalForm` is the shared post form used inside every `ArrivalsBoard` instance —
+  extend it, don't fork it.
 - **Location clustering** (`LOCATION_CLUSTERS`, `getClusterMates()` in `src/lib/constants.ts`):
   opt-in only — `/api/arrivals`'s detail route only fetches cluster-mate entries when the
   client explicitly passes `includeCluster=true`, and always filters them through the same

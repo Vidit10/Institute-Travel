@@ -104,9 +104,17 @@ can never overbook the last seat.
   creation. The form no longer collects companion emails to pre-register fellow travellers;
   when `numTravelers > 1` it just nudges the host to have their friends onboard the app
   themselves. The backend (`CompanionInvite`, `resolveCompanions` — an email matching an
-  existing account auto-linked, an unknown email getting a copyable claim link) still exists
-  and still works if a caller supplies `companionEmails`, just no longer required to match
-  `numTravelers - 1` exactly — it's optional pre-registration, not part of the standard flow.
+  existing, **already-onboarded** account auto-linked, anything else (no account, or an
+  account that only ever signed in and never finished onboarding) getting a copyable claim
+  link instead) still exists and still works if a caller supplies `companionEmails`, just no
+  longer required to match `numTravelers - 1` exactly — it's optional pre-registration, not
+  part of the standard flow. The onboarded check matters: a `User` row is created the instant
+  someone signs in with Google, before they've set a phone/gender/year/program — auto-linking
+  on email alone could silently turn that half-signed-up row into a "confirmed" rider with
+  none of that set, breaking the phone-reveal and girls-only checks and rendering as literal
+  `"undefined"` wherever their year/program is displayed. The claim-link path forces
+  onboarding first (same auth+onboarding gate as every other page) before they can become a
+  real rider.
 - **Fare**: host enters a numeric total fare (required). Per-person share is shown live at
   creation and on the trip page, recalculating as riders are accepted. There's no
   payment/settlement inside the app — this is informational only, for splitting the fare
@@ -173,48 +181,68 @@ pricing/payment feature — no money changes hands inside the app.
 
 A lightweight "I'm arriving around here, around then" signal for people who haven't
 committed to a specific vehicle yet — deliberately has no vehicle, fare, or capacity. It's a
-discovery board, not a booking: once a cluster looks worth combining, anyone in it can
+discovery board, not a booking: once a group looks worth combining, anyone in it can
 convert it into a real Trip listing, which is where the actual concurrency-safe seat/fare/
 consent machinery lives.
 
-- **One active entry per person, full stop** — a person can only be arriving at one place at
-  a time. Posting again, even at a different location, replaces the existing entry rather
-  than adding a second.
-- Fields: pickup location, date/time, mode (optional), girls-only (female users only).
-- **Browse by location**: shows a live people-count per location, refreshing automatically
-  roughly every 30 seconds while the page is open.
+There is no standalone `/arrivals` page — this board lives directly on the home page, as
+three separate sections (`src/components/ArrivalsBoard.tsx`, one instance per section, see
+§12), not one combo-switcher. A prior version had a single page trying to be both the
+long-distance board and the local day-to-day board at once (trip-type chips, direction
+chips, location chips, and a form all stacked) — split into three focused sections instead
+of simplifying that one page's UI.
+
+- **One active entry per person, full stop** — a person can only be arriving/heading out at
+  one place at a time, across *every* section. Posting in one section replaces whatever was
+  active anywhere else; if that's about to happen, the post form says so first.
+  Posting again, even at a different location, replaces the existing entry rather than
+  adding a second.
+- Fields: pickup location, date/time, mode (optional, long-distance only), girls-only
+  (female users only).
+- **Browsing is the default view, posting is behind a button** — each section leads with
+  who's already posted, not a form; "Post my status" reveals `ArrivalForm` inline. The two
+  local sections' overview always collapses to a single whole-route bucket (route-based
+  matching, §22) with no location chips to click — there's only ever one thing to browse.
+  The long-distance section keeps per-location chips (its locations aren't a single route)
+  and a live people-count per location, refreshing automatically roughly every 30 seconds
+  while the page is open.
 - Entries are grouped by proximity to a reference time — an "exact" match (within ~30
   minutes) and a looser "nearby" match (within ~3 hours) — the same clustering logic powers
   the home feed's own time/location search.
 - An entry expires automatically a short grace period after its own arrival time passes.
-- This is also the app's landing-page focus: the home page shows either your current
-  arrival status (with a one-tap way to change it) or the logging form directly, ahead of
-  the trip feed below it.
 - **Optional train/flight number**, mirroring the fields on a Trip listing — lets someone
   browsing double-check they've got the right person before reaching out.
-- **Location clustering**: a small set of nearby-but-distinct pickup points (Court Circle,
-  Jubilee Circle, Dharwad New Bus Stand, Dharwad Railway Station) can be expanded into on
-  request — "Didn't find enough people? Look around your surroundings" — using the same
-  exact/nearby time windows as everything else (not every date/time at that location).
-  Never shown for locations outside a defined cluster, and never merged into the default
-  results automatically; opt-in only. See `LOCATION_CLUSTERS` in `src/lib/constants.ts`.
-- **Auto-selected own location**: visiting `/arrivals` with an active entry defaults
-  "Browse by location" to your own location instead of requiring a click.
+- **Location clustering** (long-distance only): a small set of nearby-but-distinct pickup
+  points (Court Circle, Jubilee Circle, Dharwad New Bus Stand, Dharwad Railway Station) can
+  be expanded into on request — "Didn't find enough people? Look around your surroundings" —
+  using the same exact/nearby time windows as everything else (not every date/time at that
+  location). Never shown for locations outside a defined cluster, and never merged into the
+  default results automatically; opt-in only. See `LOCATION_CLUSTERS` in
+  `src/lib/constants.ts`. Not defined for the two local sections — their route-based
+  matching (§22) already covers the equivalent ground natively.
+- **"Create a trip for this group"** (turning a cluster of arrivals-board posts directly
+  into a Trip listing) is not available from these sections — dropped when the board moved
+  onto the home page, to keep each section to "post or browse," not a third action.
 
 ## 12. Home page & navigation
 
-- **Home page**: a personalized greeting, then two local-flow entry points ahead of everything
-  else ([§22](#22-phase-2-local-campus-city-trips): "Are you outside right now?" and "Already
-  booked a vehicle?"). Below that, the full open-trips feed is shown by default, with a
-  time/location search collapsed behind a toggle rather than always visible. The original
-  long-distance arrivals-board status widget that lived here in V1 was removed — it only ever
-  reflected the default to-campus/long-distance combo and duplicated what `/arrivals` (§11)
-  already does properly for every combo; the Arrivals tab is the one place for that now.
-- **Mobile** (below the `sm` breakpoint): a fixed bottom tab bar — Home, Arrivals, a center
-  "List a trip" action, My Rides, Account.
+- **Home page**: a personalized greeting, then three arrivals-board sections ahead of
+  everything else — "Are you outside right now?" (local, to-campus), "Heading out?" (local,
+  from-campus, with a plain "Already booked a vehicle? List it →" link into `/trips/new`
+  next to it), and "Going home or coming back?" (long-distance, with its own
+  to-campus/from-campus toggle — kept as a separate section rather than folded into the
+  local toggle, since it's a different-enough use case — once/twice a semester, its own
+  location list — that merging it back in would recreate the clutter the split was meant to
+  fix; see §11). Below that, the full open-trips feed is shown by default, with a
+  time/location search collapsed behind a toggle rather than always visible.
+- **Mobile** (below the `sm` breakpoint): a fixed bottom tab bar — Home, Recommendations, a
+  center "List a trip" action, My Rides, Account. (Arrivals no longer has a tab — it's not a
+  standalone page anymore, see §11 — and Recommendations, previously reachable only via the
+  Account menu, took the freed slot.)
 - **Desktop/tablet**: a simplified top nav — brand, one primary "List a trip" CTA,
-  notification bell, theme toggle, Account. Low-frequency actions live inside the Account
-  item, shared between both nav layouts via one component so they can't drift apart.
+  notification bell, theme toggle, Account. Low-frequency actions (including
+  Recommendations) live inside the Account item, shared between both nav layouts via one
+  component so they can't drift apart.
 - **My Rides**: `/trips/mine` (hosting) and `/trips/requested` (requested) are presented as
   one "My Rides" concept via a shared tab-link component, even though they remain separate
   routes.
@@ -264,8 +292,9 @@ this is structured survey data tied to one trip and one person, not a free-text 
 A simple, low-stakes board for restaurants, places to visit, and things to do — for anyone on
 campus, not framed as a junior-only feature. Anyone can post or browse, grouped by category.
 No visibility rules beyond the normal login gate (unlike trips/arrivals, there's no girls-only
-or consent concern here). Reachable from the Account menu; deliberately not on the bottom tab
-bar or top nav — a soft launch rather than a promoted feature.
+or consent concern here). On mobile it's a bottom tab (it took the slot the Arrivals tab used
+to occupy, once the arrivals board moved onto the home page — see §11/§12); on desktop it's
+still reached via the Account menu, same as before.
 
 - **Categories** (`RECOMMENDATION_CATEGORIES` in `src/lib/constants.ts`): Food & Dining,
   Leisure, Movies, Sightseeing, Something else.
@@ -354,8 +383,6 @@ distinct feature. `ArrivalForm`'s `quickMode` prop was removed along with it.
 - No admin/moderation UI for feedback or abuse-log review — both are handled by a manual
   look at the database today. (Recommendations (§17) are the exception — the first content
   type in the app to get an actual moderation queue, at `/admin/recommendations`.)
-- The soft-launch recommendations board (§17) is intentionally not in primary navigation yet —
-  discoverable only via the Account menu.
 
 ## 22. Phase 2: local campus↔city trips
 
@@ -421,18 +448,12 @@ Two matching modes:
   request notifications) that a ride is now available, capped at ~20 recipients. The reverse
   (notifying a host about a new nearby arrivals-board post) is deliberately not built —
   deferred to avoid notification spam from casual browsing posts.
-- Homepage (§12) leads with these entry points, ahead of the open-trips feed: "Are you outside
-  right now?" (a full local/to-campus `ArrivalIntent` post, with a real date/time picker — not
-  a quick "right now" shortcut, since a real pickup time is the point), a live count + "See who"
-  link into `/arrivals?listingType=local&direction=to-campus`, "Already booked a vehicle?"
-  (into `/trips/new?listingType=local`), and a secondary "haven't booked yet, just interested"
-  link posting a local/from-campus `ArrivalIntent`.
+- Homepage (§12) leads with three full `ArrivalsBoard` sections (§11), ahead of the open-trips
+  feed — post *and* browse inline, not just a count or a link out to another page.
 - The homepage's collapsible time/location search also got a trip-type/direction selector,
   same pattern as the arrivals board and trip creation form, so it can search local trips too
   (its location dropdown switches between `PICKUP_LOCATIONS`/`CAMPUS_LOCATIONS`/
   `CITY_LOCATIONS` depending on the selected combo) — it isn't long-distance-only anymore.
-- `/arrivals`'s heading, intro copy, and form-section label are direction-aware ("arriving" /
-  "heading out" framing) rather than fixed to the original to-campus wording.
 - `/trips/new` shows a second nudge (alongside the existing same-trip duplicate nudge) for
   local trips: "N people on this route might want to join," querying the arrivals board's
   directional mode against the draft trip's own pickup + chosen time.

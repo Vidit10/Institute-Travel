@@ -6,7 +6,8 @@ import { useSession } from "next-auth/react";
 import NavBar from "@/components/NavBar";
 import PushSubscribe from "@/components/PushSubscribe";
 import LoadingScreen from "@/components/LoadingScreen";
-import ArrivalForm from "@/components/ArrivalForm";
+import ArrivalsBoard from "@/components/ArrivalsBoard";
+import { type ArrivalEntry } from "@/components/ArrivalForm";
 import PostTripReviewPrompt from "@/components/PostTripReviewPrompt";
 import InviteFriendsPrompt from "@/components/InviteFriendsPrompt";
 import {
@@ -142,17 +143,6 @@ export default function HomePage() {
   const [reviewPromptResolved, setReviewPromptResolved] = useState(false);
   const [reviewPromptShowing, setReviewPromptShowing] = useState(false);
 
-  const [showLocalArrival, setShowLocalArrival] = useState(false);
-  const [showGoingOutInterest, setShowGoingOutInterest] = useState(false);
-  const [localOutsideCount, setLocalOutsideCount] = useState(0);
-
-  useEffect(() => {
-    fetch("/api/arrivals?listingType=local&direction=to-campus")
-      .then((r) => (r.ok ? r.json() : null))
-      .then((data) => setLocalOutsideCount(data?.overview?.[0]?.people || 0))
-      .catch(() => {});
-  }, []);
-
   const [trips, setTrips] = useState<Trip[]>([]);
   const [exact, setExact] = useState<Trip[] | null>(null);
   const [nearby, setNearby] = useState<Trip[] | null>(null);
@@ -184,6 +174,11 @@ export default function HomePage() {
 
   const [isFemale, setIsFemale] = useState(false);
   const [girlsOnlyDefault, setGirlsOnlyDefault] = useState(false);
+  // Fetched once here and passed to every ArrivalsBoard instance below — all
+  // three need the same profile fields and the same single active entry
+  // (ArrivalIntent is still one-per-user across every board), so one fetch
+  // instead of three redundant ones.
+  const [myEntries, setMyEntries] = useState<ArrivalEntry[]>([]);
 
   const loadArrivalStatus = useCallback(() => {
     fetch("/api/arrivals")
@@ -191,6 +186,7 @@ export default function HomePage() {
       .then((data) => {
         setIsFemale(data.myProfile?.gender === "female");
         setGirlsOnlyDefault(!!data.myProfile?.arrivalsGirlsOnlyDefault);
+        setMyEntries(data.myEntries || []);
       });
   }, []);
 
@@ -285,85 +281,52 @@ export default function HomePage() {
           {tagline}
         </h1>
 
-        <section className="mt-3 rounded-lg border border-gray-200 bg-white p-4 dark:border-gray-800 dark:bg-gray-900">
-          <p className="font-medium">Are you outside right now?</p>
-          <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
-            Let the community know and find fellow folks who might be returning as well, and
-            pool a ride with them.
-          </p>
-          <button
-            type="button"
-            onClick={() => setShowLocalArrival((s) => !s)}
-            className="mt-2 text-sm text-brand-600 hover:underline dark:text-brand-500"
-          >
-            {showLocalArrival ? "Never mind" : "I'm outside, heading back →"}
-          </button>
-          {showLocalArrival && (
-            <div className="mt-3 rounded-md bg-gray-50 p-3 dark:bg-gray-800">
-              <ArrivalForm
-                isFemale={isFemale}
-                defaultGirlsOnly={girlsOnlyDefault}
-                defaultListingType="local"
-                defaultDirection="to-campus"
-                submitLabel="Post it"
-                onSuccess={() => {
-                  setShowLocalArrival(false);
-                  handleArrivalPosted();
-                }}
-              />
-            </div>
-          )}
+        <ArrivalsBoard
+          listingType="local"
+          initialDirection="to-campus"
+          title="Are you outside right now?"
+          blurb="Let the community know and find fellow folks who might be returning as well, and pool a ride with them."
+          isFemale={isFemale}
+          girlsOnlyDefault={girlsOnlyDefault}
+          myEntries={myEntries}
+          onPosted={handleArrivalPosted}
+          onWithdrawn={handleArrivalPosted}
+        />
 
-          <div className="mt-4 border-t border-gray-100 pt-3 dark:border-gray-800">
-            <p className="font-medium">Already booked a vehicle?</p>
-            <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
-              Going out or returning — let the community know and find fellow folks who might
-              want to share the ride.
-              {localOutsideCount > 0 &&
-                ` ${localOutsideCount} ${localOutsideCount === 1 ? "person is" : "people are"} currently outside along the return route.`}
-            </p>
-            <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-sm">
-              <Link
-                href="/trips/new?listingType=local"
-                className="text-brand-600 hover:underline dark:text-brand-500"
-              >
-                List it →
-              </Link>
-              {localOutsideCount > 0 && (
-                <Link
-                  href="/arrivals?listingType=local&direction=to-campus"
-                  className="text-brand-600 hover:underline dark:text-brand-500"
-                >
-                  See who →
-                </Link>
-              )}
-            </div>
-            <button
-              type="button"
-              onClick={() => setShowGoingOutInterest((s) => !s)}
-              className="mt-2 block text-xs text-gray-500 hover:underline dark:text-gray-400"
-            >
-              {showGoingOutInterest
-                ? "Never mind"
-                : "Thinking about heading out but haven't booked yet? Say so →"}
-            </button>
-            {showGoingOutInterest && (
-              <div className="mt-3 rounded-md bg-gray-50 p-3 dark:bg-gray-800">
-                <ArrivalForm
-                  isFemale={isFemale}
-                  defaultGirlsOnly={girlsOnlyDefault}
-                  defaultListingType="local"
-                  defaultDirection="from-campus"
-                  submitLabel="Post it"
-                  onSuccess={() => {
-                    setShowGoingOutInterest(false);
-                    handleArrivalPosted();
-                  }}
-                />
-              </div>
-            )}
-          </div>
-        </section>
+        <div className="mt-3">
+          <Link
+            href="/trips/new?listingType=local"
+            className="text-sm text-brand-600 hover:underline dark:text-brand-500"
+          >
+            Already booked a vehicle? List it →
+          </Link>
+        </div>
+
+        <ArrivalsBoard
+          listingType="local"
+          initialDirection="from-campus"
+          title="Heading out?"
+          blurb="Haven't booked a vehicle yet — say so and find fellow folks who might want to share the ride out."
+          isFemale={isFemale}
+          girlsOnlyDefault={girlsOnlyDefault}
+          myEntries={myEntries}
+          onPosted={handleArrivalPosted}
+          onWithdrawn={handleArrivalPosted}
+        />
+
+        <ArrivalsBoard
+          listingType="long-distance"
+          initialDirection="to-campus"
+          allowDirectionToggle
+          showClusterExpansion
+          title="Going home or coming back?"
+          blurb="For longer trips — train, flight, or bus. Log your travel time and see who else is around."
+          isFemale={isFemale}
+          girlsOnlyDefault={girlsOnlyDefault}
+          myEntries={myEntries}
+          onPosted={handleArrivalPosted}
+          onWithdrawn={handleArrivalPosted}
+        />
 
         <h2 className="mt-4 text-lg font-semibold">Upcoming trips</h2>
 
