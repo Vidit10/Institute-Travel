@@ -1,12 +1,54 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
+import { useSession } from "next-auth/react";
 import NavBar from "@/components/NavBar";
 import PushSubscribe from "@/components/PushSubscribe";
 import LoadingScreen from "@/components/LoadingScreen";
-import ArrivalForm, { type ArrivalEntry } from "@/components/ArrivalForm";
-import { PICKUP_LOCATIONS } from "@/lib/constants";
+import ArrivalForm from "@/components/ArrivalForm";
+import PostTripReviewPrompt from "@/components/PostTripReviewPrompt";
+import InviteFriendsPrompt from "@/components/InviteFriendsPrompt";
+import {
+  PICKUP_LOCATIONS,
+  CAMPUS_LOCATIONS,
+  CITY_LOCATIONS,
+  DIRECTIONS,
+  DIRECTION_LABELS,
+  LISTING_TYPES,
+  resolveTripCombo,
+} from "@/lib/constants";
+
+const LISTING_TYPE_LABELS: Record<(typeof LISTING_TYPES)[number], string> = {
+  "long-distance": "Long-distance",
+  local: "Local",
+};
+
+// Search-bar location options for a given combo — mirrors the pairing used by
+// the trip creation form and ArrivalForm. "Others" is excluded here since it's
+// free text with no fixed value to filter by.
+function searchLocations(listingType: string, direction: string): readonly string[] {
+  const combo = resolveTripCombo(listingType, direction);
+  switch (combo) {
+    case "arrival":
+      return PICKUP_LOCATIONS;
+    case "departure-long":
+    case "local-departure":
+      return CAMPUS_LOCATIONS;
+    case "local-return":
+      return CITY_LOCATIONS.filter((loc) => loc !== "Others");
+  }
+}
+
+// At least half a dozen so the greeting doesn't feel repetitive across visits.
+const TAGLINES = [
+  "let's rock tonight",
+  "the weekend is near",
+  "what are your evening plans?",
+  "time to plan your next move",
+  "where's everyone headed today?",
+  "let's get you a ride",
+];
 
 type Trip = {
   _id: string;
@@ -14,6 +56,8 @@ type Trip = {
   vehicleType: string;
   pickupLocation: string;
   destination: string;
+  direction?: "to-campus" | "from-campus";
+  listingType?: "long-distance" | "local";
   departureTime: string;
   seatsRemaining: number;
   totalCapacity: number;
@@ -54,6 +98,11 @@ function TripCard({ trip }: { trip: Trip }) {
           {trip.mode}
         </span>
         <div className="flex items-center gap-2">
+          {(trip.listingType === "local" || trip.direction === "from-campus") && (
+            <span className="rounded-full bg-gray-100 px-2.5 py-1 text-xs font-medium text-gray-700 dark:bg-gray-800 dark:text-gray-200">
+              {DIRECTION_LABELS[trip.direction || "to-campus"]}
+            </span>
+          )}
           <span className="rounded-full bg-gray-100 px-2.5 py-1 text-xs font-medium text-gray-700 dark:bg-gray-800 dark:text-gray-200">
             {trip.vehicleType}
           </span>
@@ -82,12 +131,44 @@ function TripCard({ trip }: { trip: Trip }) {
 }
 
 export default function HomePage() {
+  const { data: session } = useSession();
+  const firstName = session?.user?.name?.split(" ")[0];
+  // Random per page-load rather than date-based — keeps it fresh without any
+  // extra logic, and a repeat visit the same day doesn't feel stale.
+  const tagline = useMemo(() => TAGLINES[Math.floor(Math.random() * TAGLINES.length)], []);
+
+  // Only one popup should ever show at once — invite-friends waits until the
+  // post-trip review prompt has had first refusal (see PostTripReviewPrompt).
+  const [reviewPromptResolved, setReviewPromptResolved] = useState(false);
+  const [reviewPromptShowing, setReviewPromptShowing] = useState(false);
+
+  const [showLocalArrival, setShowLocalArrival] = useState(false);
+  const [showGoingOutInterest, setShowGoingOutInterest] = useState(false);
+  const [localOutsideCount, setLocalOutsideCount] = useState(0);
+
+  useEffect(() => {
+    fetch("/api/arrivals?listingType=local&direction=to-campus")
+      .then((r) => (r.ok ? r.json() : null))
+      .then((data) => setLocalOutsideCount(data?.overview?.[0]?.people || 0))
+      .catch(() => {});
+  }, []);
+
   const [trips, setTrips] = useState<Trip[]>([]);
   const [exact, setExact] = useState<Trip[] | null>(null);
   const [nearby, setNearby] = useState<Trip[] | null>(null);
   const [loading, setLoading] = useState(true);
   const [filtering, setFiltering] = useState(false);
+  // Tracks "a search was applied" directly, rather than inferring it from
+  // exact/nearby being non-null — a location-only or time-only search
+  // returns a flat `{ trips }` shape (no exact/nearby split), which used to
+  // silently reset the old exact/nearby-based flag to "unfiltered" even
+  // though the list was genuinely filtered/re-sorted. That made results look
+  // wrong and hid the only way back to the full list.
+  const [isFiltered, setIsFiltered] = useState(false);
+  const [lastSearchSummary, setLastSearchSummary] = useState("");
 
+  const [filterListingType, setFilterListingType] = useState<(typeof LISTING_TYPES)[number]>("long-distance");
+  const [filterDirection, setFilterDirection] = useState<(typeof DIRECTIONS)[number]>("to-campus");
   const [filterLocation, setFilterLocation] = useState("");
   const [filterDate, setFilterDate] = useState("");
   const [filterHour, setFilterHour] = useState(9);
@@ -95,22 +176,22 @@ export default function HomePage() {
   const [filterAmpm, setFilterAmpm] = useState<"AM" | "PM">("AM");
   const [searchOpen, setSearchOpen] = useState(false);
 
-  const [arrivalsLoaded, setArrivalsLoaded] = useState(false);
-  // A person can only have one active arrival — API returns at most one.
-  const [myEntry, setMyEntry] = useState<ArrivalEntry | null>(null);
+  function updateFilterTripType(listingType: (typeof LISTING_TYPES)[number], direction: (typeof DIRECTIONS)[number]) {
+    setFilterListingType(listingType);
+    setFilterDirection(direction);
+    setFilterLocation("");
+  }
+
   const [isFemale, setIsFemale] = useState(false);
   const [girlsOnlyDefault, setGirlsOnlyDefault] = useState(false);
-  const [editingArrival, setEditingArrival] = useState(false);
 
   const loadArrivalStatus = useCallback(() => {
     fetch("/api/arrivals")
       .then((r) => r.json())
       .then((data) => {
-        setMyEntry(data.myEntries?.[0] || null);
         setIsFemale(data.myProfile?.gender === "female");
         setGirlsOnlyDefault(!!data.myProfile?.arrivalsGirlsOnlyDefault);
-      })
-      .finally(() => setArrivalsLoaded(true));
+      });
   }, []);
 
   useEffect(() => {
@@ -118,7 +199,6 @@ export default function HomePage() {
   }, [loadArrivalStatus]);
 
   function handleArrivalPosted() {
-    setEditingArrival(false);
     loadArrivalStatus();
   }
 
@@ -130,6 +210,8 @@ export default function HomePage() {
         setTrips(data.trips || []);
         setExact(null);
         setNearby(null);
+        setIsFiltered(false);
+        setLastSearchSummary("");
       })
       .finally(() => setLoading(false));
   }, []);
@@ -138,17 +220,23 @@ export default function HomePage() {
     loadDefault();
   }, [loadDefault]);
 
-  const isFiltered = exact !== null || nearby !== null;
-
   function applyFilter(e: React.FormEvent) {
     e.preventDefault();
     const params = new URLSearchParams();
-    if (filterLocation) params.set("pickupLocation", filterLocation);
+    if (filterLocation) {
+      params.set("pickupLocation", filterLocation);
+      params.set("listingType", filterListingType);
+      params.set("direction", filterDirection);
+    }
     const targetDate = buildDate(filterDate, filterHour, filterMinute, filterAmpm);
     if (targetDate && !isNaN(targetDate.getTime())) {
       params.set("targetTime", targetDate.toISOString());
     }
     if (!params.toString()) return;
+
+    const summaryParts: string[] = [];
+    if (filterLocation) summaryParts.push(filterLocation);
+    if (targetDate && !isNaN(targetDate.getTime())) summaryParts.push(targetDate.toLocaleString());
 
     setFiltering(true);
     fetch(`/api/trips?${params.toString()}`)
@@ -162,11 +250,15 @@ export default function HomePage() {
           setExact(null);
           setNearby(null);
         }
+        setIsFiltered(true);
+        setLastSearchSummary(summaryParts.join(" · "));
       })
       .finally(() => setFiltering(false));
   }
 
   function clearFilter() {
+    setFilterListingType("long-distance");
+    setFilterDirection("to-campus");
     setFilterLocation("");
     setFilterDate("");
     loadDefault();
@@ -179,67 +271,116 @@ export default function HomePage() {
   return (
     <>
       <PushSubscribe />
+      <PostTripReviewPrompt
+        onResolved={(showing) => {
+          setReviewPromptShowing(showing);
+          setReviewPromptResolved(true);
+        }}
+      />
+      <InviteFriendsPrompt enabled={reviewPromptResolved && !reviewPromptShowing} />
       <NavBar />
       <main className="mx-auto max-w-2xl px-4 py-6 pb-20 sm:pb-6">
-        <section className="rounded-lg border border-brand-200 bg-brand-50 p-4 dark:border-brand-900 dark:bg-brand-950">
-          {!arrivalsLoaded ? (
-            <div className="h-16" aria-hidden />
-          ) : myEntry ? (
-            <>
-              <p className="font-medium text-brand-700 dark:text-brand-400">
-                Not sure who you&apos;re travelling with yet? Here&apos;s where you stand:
-              </p>
-              <div className="mt-2 flex items-center justify-between gap-2 rounded-md bg-white/60 px-3 py-2 text-sm dark:bg-black/20">
-                <span className="text-gray-700 dark:text-gray-200">
-                  You&apos;re arriving at <strong>{myEntry.pickupLocation}</strong> around{" "}
-                  {new Date(myEntry.arrivalTime).toLocaleString()}
-                </span>
-                <button
-                  onClick={() => setEditingArrival((e) => !e)}
-                  className="shrink-0 text-xs text-brand-700 hover:underline dark:text-brand-400"
-                >
-                  Change
-                </button>
-              </div>
-              {editingArrival && (
-                <div className="mt-2 rounded-md bg-white/60 p-3 dark:bg-black/20">
-                  <ArrivalForm
-                    initialEntry={myEntry}
-                    isFemale={isFemale}
-                    defaultGirlsOnly={girlsOnlyDefault}
-                    submitLabel="Update my arrival"
-                    onSuccess={handleArrivalPosted}
-                  />
-                </div>
-              )}
+        <h1 className="text-lg font-semibold">
+          {firstName ? `Hi ${firstName}, ` : ""}
+          {tagline}
+        </h1>
+
+        <section className="mt-3 rounded-lg border border-gray-200 bg-white p-4 dark:border-gray-800 dark:bg-gray-900">
+          <p className="font-medium">Are you outside right now?</p>
+          <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
+            Let the community know and find fellow folks who might be returning as well, and
+            pool a ride with them.
+          </p>
+          <button
+            type="button"
+            onClick={() => setShowLocalArrival((s) => !s)}
+            className="mt-2 text-sm text-brand-600 hover:underline dark:text-brand-500"
+          >
+            {showLocalArrival ? "Never mind" : "I'm outside, heading back →"}
+          </button>
+          {showLocalArrival && (
+            <div className="mt-3 rounded-md bg-gray-50 p-3 dark:bg-gray-800">
+              <ArrivalForm
+                isFemale={isFemale}
+                defaultGirlsOnly={girlsOnlyDefault}
+                defaultListingType="local"
+                defaultDirection="to-campus"
+                submitLabel="Post it"
+                onSuccess={() => {
+                  setShowLocalArrival(false);
+                  handleArrivalPosted();
+                }}
+              />
+            </div>
+          )}
+
+          <div className="mt-4 border-t border-gray-100 pt-3 dark:border-gray-800">
+            <p className="font-medium">Already booked a vehicle?</p>
+            <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
+              Going out or returning — let the community know and find fellow folks who might
+              want to share the ride.
+              {localOutsideCount > 0 &&
+                ` ${localOutsideCount} ${localOutsideCount === 1 ? "person is" : "people are"} currently outside along the return route.`}
+            </p>
+            <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-sm">
               <Link
-                href="/arrivals"
-                className="mt-2 inline-block text-sm text-brand-600 hover:underline dark:text-brand-500"
+                href="/trips/new?listingType=local"
+                className="text-brand-600 hover:underline dark:text-brand-500"
               >
-                See who else is arriving when you are →
+                List it →
               </Link>
-            </>
-          ) : (
-            <>
-              <p className="font-medium text-brand-700 dark:text-brand-400">
-                Not sure who&apos;s travelling with you yet?
-              </p>
-              <p className="mt-1 text-sm text-brand-600 dark:text-brand-500">
-                Log your arrival time below and see who else is around — it takes a few
-                seconds, and you can turn it into a real listing once you know your group.
-              </p>
-              <div className="mt-3">
+              {localOutsideCount > 0 && (
+                <Link
+                  href="/arrivals?listingType=local&direction=to-campus"
+                  className="text-brand-600 hover:underline dark:text-brand-500"
+                >
+                  See who →
+                </Link>
+              )}
+            </div>
+            <button
+              type="button"
+              onClick={() => setShowGoingOutInterest((s) => !s)}
+              className="mt-2 block text-xs text-gray-500 hover:underline dark:text-gray-400"
+            >
+              {showGoingOutInterest
+                ? "Never mind"
+                : "Thinking about heading out but haven't booked yet? Say so →"}
+            </button>
+            {showGoingOutInterest && (
+              <div className="mt-3 rounded-md bg-gray-50 p-3 dark:bg-gray-800">
                 <ArrivalForm
                   isFemale={isFemale}
                   defaultGirlsOnly={girlsOnlyDefault}
-                  onSuccess={handleArrivalPosted}
+                  defaultListingType="local"
+                  defaultDirection="from-campus"
+                  submitLabel="Post it"
+                  onSuccess={() => {
+                    setShowGoingOutInterest(false);
+                    handleArrivalPosted();
+                  }}
                 />
               </div>
-            </>
-          )}
+            )}
+          </div>
         </section>
 
-        <h1 className="mt-4 text-lg font-semibold">Upcoming trips</h1>
+        <h2 className="mt-4 text-lg font-semibold">Upcoming trips</h2>
+
+        {isFiltered && (
+          <div className="mt-2 flex items-center justify-between gap-2 rounded-lg bg-gray-100 px-3 py-2 text-sm text-gray-600 dark:bg-gray-800 dark:text-gray-300">
+            <span className="break-words">
+              Showing results{lastSearchSummary ? ` for ${lastSearchSummary}` : ""}
+            </span>
+            <button
+              type="button"
+              onClick={clearFilter}
+              className="shrink-0 font-medium text-brand-600 hover:underline dark:text-brand-500"
+            >
+              Show all trips
+            </button>
+          </div>
+        )}
 
         <button
           type="button"
@@ -253,14 +394,45 @@ export default function HomePage() {
 
         {searchOpen && (
         <form onSubmit={applyFilter} className="mt-2 rounded-lg border border-gray-200 bg-white p-3 dark:border-gray-800 dark:bg-gray-900">
-          <div className="grid grid-cols-2 gap-2 sm:grid-cols-5">
+          <div className="flex flex-wrap gap-2 text-xs">
+            {LISTING_TYPES.map((lt) => (
+              <button
+                key={lt}
+                type="button"
+                onClick={() => updateFilterTripType(lt, filterDirection)}
+                className={`rounded-full border px-2.5 py-1 ${
+                  filterListingType === lt
+                    ? "border-brand-600 bg-brand-600 text-white"
+                    : "border-gray-300 hover:bg-gray-50 dark:border-gray-700 dark:hover:bg-gray-800"
+                }`}
+              >
+                {LISTING_TYPE_LABELS[lt]}
+              </button>
+            ))}
+            <span className="mx-1 self-center text-gray-300 dark:text-gray-700">|</span>
+            {DIRECTIONS.map((d) => (
+              <button
+                key={d}
+                type="button"
+                onClick={() => updateFilterTripType(filterListingType, d)}
+                className={`rounded-full border px-2.5 py-1 ${
+                  filterDirection === d
+                    ? "border-brand-600 bg-brand-600 text-white"
+                    : "border-gray-300 hover:bg-gray-50 dark:border-gray-700 dark:hover:bg-gray-800"
+                }`}
+              >
+                {DIRECTION_LABELS[d]}
+              </button>
+            ))}
+          </div>
+          <div className="mt-2 grid grid-cols-2 gap-2 sm:grid-cols-5">
             <select
               className="col-span-2 rounded-md border border-gray-300 px-2 py-2 text-sm dark:border-gray-700 dark:bg-gray-900 sm:col-span-1"
               value={filterLocation}
               onChange={(e) => setFilterLocation(e.target.value)}
             >
               <option value="">Any location</option>
-              {PICKUP_LOCATIONS.map((loc) => (
+              {searchLocations(filterListingType, filterDirection).map((loc) => (
                 <option key={loc} value={loc}>{loc}</option>
               ))}
             </select>
@@ -310,7 +482,7 @@ export default function HomePage() {
                 onClick={clearFilter}
                 className="rounded-md border border-gray-300 px-3 py-1.5 text-sm hover:bg-gray-50 dark:border-gray-700 dark:hover:bg-gray-800"
               >
-                Clear
+                Show all trips
               </button>
             )}
           </div>
@@ -337,7 +509,26 @@ export default function HomePage() {
           </ul>
         )}
 
-        {!loading && isFiltered && (
+        {/* Two possible response shapes from a search: location+time together
+            split into exact/nearby buckets; a location-only or time-only
+            search instead returns a flat, re-sorted `trips` list (no bucket
+            to put it in). Both are still "filtered" — rendering the wrong
+            branch for the flat case is what used to make a location-only
+            search look like it found nothing. */}
+        {!loading && isFiltered && exact === null && nearby === null && (
+          <>
+            {trips.length === 0 && (
+              <p className="mt-4 text-gray-500 dark:text-gray-400">No matching trips found.</p>
+            )}
+            <ul className="mt-4 space-y-3">
+              {trips.map((trip) => (
+                <li key={trip._id}><TripCard trip={trip} /></li>
+              ))}
+            </ul>
+          </>
+        )}
+
+        {!loading && isFiltered && (exact !== null || nearby !== null) && (
           <>
             {(exact?.length || 0) === 0 && (nearby?.length || 0) === 0 && (
               <p className="mt-4 text-gray-500 dark:text-gray-400">No matching trips found.</p>

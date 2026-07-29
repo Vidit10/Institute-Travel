@@ -1,11 +1,12 @@
 import { Schema, model, models, type InferSchemaType } from "mongoose";
 import {
-  PICKUP_LOCATIONS,
-  DESTINATIONS,
-  DEFAULT_DESTINATION,
   TRIP_MODES,
   TRIP_STATUSES,
   VEHICLE_TYPES,
+  DIRECTIONS,
+  LISTING_TYPES,
+  TRAVEL_TYPES,
+  DEFAULT_DESTINATION,
 } from "@/lib/constants";
 
 const tripSchema = new Schema(
@@ -14,10 +15,27 @@ const tripSchema = new Schema(
 
     mode: { type: String, enum: TRIP_MODES, required: true },
     vehicleType: { type: String, enum: VEHICLE_TYPES, required: true },
-    pickupLocation: { type: String, enum: PICKUP_LOCATIONS, required: true },
-    // Fixed to a single value for V1 (no destination selector) — kept as an enum
-    // rather than a plain default so the schema still guards against bad data.
-    destination: { type: String, enum: DESTINATIONS, default: DEFAULT_DESTINATION, required: true },
+    // Start/end point of the ride. No longer a fixed Mongoose enum — the valid value
+    // set depends on `direction`/`listingType` (four combinations, see docs/SPEC.md),
+    // enforced in the API layer (zod) instead. Loosening this (rather than renaming)
+    // keeps every pre-existing document valid untouched: old rows already hold a
+    // valid city-location string in pickupLocation and "IIT Dharwad Hostels" in
+    // destination, which remain valid under the new, wider string type.
+    pickupLocation: { type: String, required: true },
+    // Defaults to the original fixed value so any caller that doesn't set it
+    // explicitly (including pre-existing test/API code paths) keeps V1's exact
+    // behavior — the API layer still always sets it explicitly for real writes.
+    destination: { type: String, required: true, default: DEFAULT_DESTINATION },
+
+    // Which way the ride goes. Old documents (pre-dating this field) default to
+    // "to-campus" on read — exactly their original, only meaning — so nothing about
+    // the existing arrival flow changes for them.
+    direction: { type: String, enum: DIRECTIONS, default: "to-campus" },
+    // Long-distance = the original semester-start flow (PICKUP_LOCATIONS <-> Hostels).
+    // Local = everyday campus<->city hops (CAMPUS_LOCATIONS <-> CITY_LOCATIONS).
+    listingType: { type: String, enum: LISTING_TYPES, default: "long-distance" },
+    // Informational only — sets rider expectations, never enforced/matched against.
+    travelType: { type: String, enum: TRAVEL_TYPES, default: "leisure" },
 
     departureTime: { type: Date, required: true }, // self-reported ETA at pickup location
 

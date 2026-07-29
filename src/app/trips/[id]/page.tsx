@@ -1,10 +1,11 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
-import { useParams } from "next/navigation";
+import { Suspense, useEffect, useState, useCallback } from "react";
+import { useParams, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import NavBar from "@/components/NavBar";
 import LoadingScreen from "@/components/LoadingScreen";
+import ShareCTA from "@/components/ShareCTA";
 import { REFERENCE_FARES, YEAR_LABELS, PROGRAM_LABELS } from "@/lib/constants";
 
 function formatYearProgram(year: string, program: string) {
@@ -47,7 +48,17 @@ type TripDetail = {
 };
 
 export default function TripDetailPage() {
+  return (
+    <Suspense fallback={null}>
+      <TripDetailContent />
+    </Suspense>
+  );
+}
+
+function TripDetailContent() {
   const { id } = useParams<{ id: string }>();
+  const searchParams = useSearchParams();
+  const justCreated = searchParams.get("created") === "true";
   const [data, setData] = useState<TripDetail | null>(null);
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
@@ -226,6 +237,10 @@ export default function TripDetailPage() {
           {shareLabel}
         </button>
 
+        {justCreated && isHost && (
+          <ShareCTA blurb="Trip's live! The more people on CoRide, the easier it is to fill your seats." />
+        )}
+
         <Link
           href={`/feedback?category=report&context=${encodeURIComponent(
             `Trip ${trip.pickupLocation} → ${trip.destination}, hosted by ${host.name} (id: ${trip._id})`
@@ -236,6 +251,9 @@ export default function TripDetailPage() {
         </Link>
 
         {message && <p className="mt-3 text-sm text-brand-600 dark:text-brand-500">{message}</p>}
+        {message === "Request sent!" && (
+          <ShareCTA blurb="Request sent! Know someone else who could use CoRide too?" />
+        )}
 
         {isHost && pendingInvites.length > 0 && (
           <div className="mt-4 rounded-lg border border-gray-200 bg-white p-4 dark:border-gray-800 dark:bg-gray-900">

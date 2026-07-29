@@ -50,7 +50,7 @@ export default function RootLayout({
                     </Link>
                   </div>
                 </div>
-                <p className="mt-1">Be someone you&apos;d want to share a cab with.</p>
+                {/* <p className="mt-1">Be someone you&apos;d want to share a cab with.</p> */}
                 <p className="mt-2 text-[11px] text-gray-400 dark:text-gray-600">
                   Experience curated by{" "}
                   <a href="mailto:mc23bt010@iitdh.ac.in" className="hover:underline">

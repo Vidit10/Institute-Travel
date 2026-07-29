@@ -21,6 +21,9 @@ scope and what's explicitly deferred.
   - `JoinRequest` — a rider's request to join a trip (pending/accepted/declined/expired)
   - `ArrivalIntent` — a lightweight "I'm arriving around here, around then" board entry
     (see the arrivals-board bullet below)
+  - `TripReview` — a post-trip check-in, one per `{tripId, userId}` (see the post-trip
+    reviews bullet below)
+  - `Recommendation` — a restaurant/place-to-visit board entry, no relation to Trip/ArrivalIntent
   - `PushSubscription` — web-push endpoints per user
   - `AbuseLog` — rate-limit lockout records (see the rate-limiting bullet below)
   - **No data-deletion cron, and don't add one for "cleanup."** The existing cron
@@ -46,11 +49,18 @@ scope and what's explicitly deferred.
   contact info must preserve this — don't just return the full user object.
 - **Notifications**: `src/lib/notify.ts` sends Web Push (VAPID, `src/lib/webpush.ts`,
   `public/sw.js`) for every essential event — request sent/accepted/declined/expired/trip
-  cancelled. Best-effort and swallows failures — a failed notification must never break
-  the underlying accept/decline/request flow. Push is the only notification channel; email
-  was removed as a communication medium entirely (see SPEC.md's notifications section). The
-  one remaining use of `src/lib/email.ts` is the companion-invite claim-link email in
-  `src/lib/companionInvites.ts`, superseded by a copyable link for the same flow.
+  cancelled/post-trip review nudge. Best-effort and swallows failures — a failed
+  notification must never break the underlying accept/decline/request flow. Push is the
+  only notification channel; email was removed as a communication medium entirely (see
+  SPEC.md's notifications section). The one remaining use of `src/lib/email.ts` is the
+  companion-invite claim-link email in `src/lib/companionInvites.ts`, superseded by a
+  copyable link for the same flow.
+- **The expiry cron does three things now**, not just request expiry
+  (`src/app/api/cron/expire-requests/route.ts`): expires stale `JoinRequest`s, flips
+  departed trips to `completed`, and — for trips *newly* flipped to `completed` in that same
+  run — pushes a post-trip review nudge to the host and every accepted rider. It finds
+  candidates before updating them (not a blind `updateMany`) specifically so it knows which
+  trips are newly completed and doesn't re-notify on every subsequent cron run.
 - **Live tracking** (`src/app/api/tracking/route.ts`): best-effort only. If no API key is
   configured, or the provider call fails, it returns `{ live: false }` and the UI should
   fall back to the user's self-reported ETA/train/flight number — never show a broken state.
@@ -70,11 +80,34 @@ scope and what's explicitly deferred.
   partial unique index on `{ userId }` (not per-location) — posting again, even at a
   different location, replaces the existing entry rather than adding a second. The form
   component is shared between the home page and `/arrivals`; don't duplicate its fields or
-  submit logic in either place.
+  submit logic in either place. `ArrivalForm` also takes a `quickMode` prop (skips the
+  date/time picker, posts ~10 minutes out) used by the beta "arriving right now" flow —
+  same backend, no separate endpoint.
+- **Location clustering** (`LOCATION_CLUSTERS`, `getClusterMates()` in `src/lib/constants.ts`):
+  opt-in only — `/api/arrivals`'s detail route only fetches cluster-mate entries when the
+  client explicitly passes `includeCluster=true`, and always filters them through the same
+  `splitByProximity` exact/nearby time windows used everywhere else. Don't merge cluster
+  results into the default exact/nearby response, and don't drop the time filtering — an
+  earlier version of this sorted cluster entries by proximity but forgot to actually exclude
+  far-off ones, which defeated the point.
 - **Active-trip cap** (`MAX_ACTIVE_TRIPS_PER_HOST` in `src/lib/constants.ts`): a host can
   have at most 5 trips with status `open`/`full` at once, enforced server-side in
   `POST /api/trips`. Raise the constant if this ever needs to change — don't special-case
   around it elsewhere.
+- **Post-trip reviews** (`src/models/TripReview.ts`, `src/app/api/trips/[id]/review/`,
+  `src/app/api/trips/pending-review/`): triggered by the cron above; surfaced via push *and*
+  a home-page popup (`PostTripReviewPrompt.tsx`) for users without push enabled. Feeds
+  `src/lib/adminMetrics.ts`'s real (self-reported) savings figures on the admin dashboard —
+  kept visually and semantically separate from the modeled estimate there, not blended in.
+- **Invite-friends nudge** (`InviteFriendsPrompt.tsx`, `User.inviteFriendsPromptShown`):
+  server-tracked, not localStorage — the point is "once ever," which a client-only flag
+  can't guarantee across devices/cleared browsers. Coordinates with
+  `PostTripReviewPrompt` via an `onResolved` callback on the home page so the two popups
+  never stack; the review prompt always gets first refusal. If you add a third home-page
+  popup, extend that same coordination rather than letting popups race independently.
+- **Recommendations** (`src/models/Recommendation.ts`, `src/app/api/recommendations/`,
+  `src/app/recommendations/`): intentionally the simplest surface in the app — no
+  visibility rules, no relation to any other model. Reachable only from the Account menu.
 - **Feedback categories** (`src/models/Feedback.ts`, `src/app/api/feedback/route.ts`,
   `src/app/feedback/page.tsx`): a fixed enum kept in sync across all three files — there's no
   resolve/dismiss action yet, so every category (including `profile_correction`, see

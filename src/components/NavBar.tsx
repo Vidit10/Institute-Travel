@@ -64,7 +64,7 @@ export default function NavBar() {
           {/* Desktop: brand · one primary CTA · low-frequency icons · account */}
           <div className="hidden items-center gap-3 text-sm sm:flex">
             <Link
-              href="/trips/new"
+              href="/trips/new?listingType=local"
               className="rounded-md bg-brand-600 px-3 py-1.5 font-medium text-white hover:bg-brand-700"
             >
               List a trip

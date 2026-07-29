@@ -7,7 +7,7 @@ import NavBar from "@/components/NavBar";
 const CATEGORIES = [
   { value: "recommendation", label: "Recommendation" },
   { value: "bug", label: "Bug" },
-  { value: "report", label: "Report a trip or user" },
+  { value: "report", label: "Report a trip, user, or recommendation" },
   { value: "profile_correction", label: "Fix my name or gender" },
   { value: "other", label: "Something else" },
 ];

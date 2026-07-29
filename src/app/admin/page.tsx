@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
 import { signOut, useSession } from "next-auth/react";
 import LoadingScreen from "@/components/LoadingScreen";
 
@@ -16,6 +17,12 @@ type Metrics = {
   arrivals: { total: number; girlsOnly: number };
   programCounts: Array<{ _id: string; count: number }>;
   moneySaved: number;
+  tripReviews: {
+    total: number;
+    happenedRate: number | null;
+    avgReportedSavings: number | null;
+    wouldUseAgainCounts: Record<string, number>;
+  };
   feedback: {
     byCategory: Record<
       string,
@@ -33,7 +40,7 @@ type Metrics = {
 const CATEGORY_LABELS: Record<string, string> = {
   recommendation: "Recommendation",
   bug: "Bug",
-  report: "Report a trip or user",
+  report: "Report a trip, user, or recommendation",
   profile_correction: "Fix locked profile info",
   other: "Something else",
 };
@@ -94,6 +101,14 @@ export default function AdminPage() {
   const [metrics, setMetrics] = useState<Metrics | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [pendingRecommendations, setPendingRecommendations] = useState<number | null>(null);
+
+  useEffect(() => {
+    fetch("/api/admin/recommendations")
+      .then((r) => (r.ok ? r.json() : null))
+      .then((data) => setPendingRecommendations(data?.recommendations?.length ?? null))
+      .catch(() => {});
+  }, []);
 
   function load() {
     setLoading(true);
@@ -143,6 +158,18 @@ export default function AdminPage() {
             {loading ? "Refreshing..." : "Refresh"}
           </button>
         </div>
+
+        {pendingRecommendations !== null && pendingRecommendations > 0 && (
+          <Link
+            href="/admin/recommendations"
+            className="mt-4 flex items-center justify-between rounded-lg border border-brand-200 bg-brand-50 px-4 py-3 text-sm hover:bg-brand-100 dark:border-brand-900 dark:bg-brand-950 dark:hover:bg-brand-900"
+          >
+            <span className="text-brand-700 dark:text-brand-400">
+              {pendingRecommendations} recommendation{pendingRecommendations === 1 ? "" : "s"} waiting for review
+            </span>
+            <span className="text-brand-600 dark:text-brand-500">Review →</span>
+          </Link>
+        )}
 
         {loading && !metrics && <LoadingScreen />}
         {error && (
@@ -269,6 +296,43 @@ export default function AdminPage() {
                 )}
               </Section>
             </div>
+
+            <Section title={`Post-trip reviews (${metrics.tripReviews.total})`}>
+              <p className="text-xs text-gray-500 dark:text-gray-400">
+                Self-reported, sent after a trip completes — a small-sample complement to the
+                modeled "Est. money saved" tile above, not a replacement for it.
+              </p>
+              {metrics.tripReviews.total === 0 ? (
+                <p className="mt-3 text-sm text-gray-500 dark:text-gray-400">No reviews yet.</p>
+              ) : (
+                <div className="mt-3 flex flex-wrap gap-6 text-sm">
+                  <div>
+                    <p className="text-xl font-semibold">
+                      {metrics.tripReviews.happenedRate !== null
+                        ? `${Math.round(metrics.tripReviews.happenedRate * 100)}%`
+                        : "—"}
+                    </p>
+                    <p className="text-gray-500 dark:text-gray-400">Trips that happened as planned</p>
+                  </div>
+                  <div>
+                    <p className="text-xl font-semibold">
+                      {metrics.tripReviews.avgReportedSavings !== null
+                        ? `₹${Math.round(metrics.tripReviews.avgReportedSavings)}`
+                        : "—"}
+                    </p>
+                    <p className="text-gray-500 dark:text-gray-400">Avg. reported savings/trip</p>
+                  </div>
+                  <div>
+                    <p className="text-xl font-semibold">
+                      {Object.entries(metrics.tripReviews.wouldUseAgainCounts)
+                        .map(([k, v]) => `${v} ${k}`)
+                        .join(" · ") || "—"}
+                    </p>
+                    <p className="text-gray-500 dark:text-gray-400">Would use again</p>
+                  </div>
+                </div>
+              )}
+            </Section>
 
             <Section title={`Feedback (${metrics.feedback.total})`}>
               <div className="space-y-5">

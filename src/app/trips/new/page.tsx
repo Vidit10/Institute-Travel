@@ -5,14 +5,32 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { useSession } from "next-auth/react";
 import Link from "next/link";
 import NavBar from "@/components/NavBar";
+import ShareCTA from "@/components/ShareCTA";
 import {
   PICKUP_LOCATIONS,
+  CAMPUS_LOCATIONS,
+  CITY_LOCATIONS,
+  DEFAULT_DESTINATION,
+  DIRECTIONS,
+  DIRECTION_LABELS,
+  LISTING_TYPES,
+  TRAVEL_TYPES,
+  TRAVEL_TYPE_DELAY_HINTS,
   TRIP_MODES,
   VEHICLE_TYPES,
   RECOMMENDED_CAPACITY,
+  LOCAL_RECOMMENDED_CAPACITY,
   MAX_ADVANCE_DAYS,
   MINUTE_OPTIONS,
+  resolveTripCombo,
 } from "@/lib/constants";
+
+// Which recommended-capacity table applies — local trips use a higher table
+// (no long-distance luggage constraint), see docs/SPEC.md.
+function recommendedCapacity(listingType: string, vehicleType: string): number | undefined {
+  const table = listingType === "local" ? LOCAL_RECOMMENDED_CAPACITY : RECOMMENDED_CAPACITY;
+  return table[vehicleType];
+}
 
 // Pre-fills the pickup location based on travel mode — still editable.
 const DEFAULT_PICKUP_BY_MODE: Record<string, (typeof PICKUP_LOCATIONS)[number]> = {
@@ -20,6 +38,28 @@ const DEFAULT_PICKUP_BY_MODE: Record<string, (typeof PICKUP_LOCATIONS)[number]> 
   flight: "Hubli Airport",
   bus: "Dharwad New Bus Stand",
 };
+
+const LISTING_TYPE_LABELS: Record<(typeof LISTING_TYPES)[number], string> = {
+  "long-distance": "Long-distance arrival (train/flight/bus)",
+  local: "Local campus ↔ city trip",
+};
+
+// Which location list each side of the trip draws from, for a given
+// (listingType, direction) combo — mirrors resolveTripCombo's four cases.
+// "fixed" means the field isn't shown at all (forced server-side).
+function locationConfig(listingType: string, direction: string) {
+  const combo = resolveTripCombo(listingType, direction);
+  switch (combo) {
+    case "arrival":
+      return { pickup: PICKUP_LOCATIONS as readonly string[], destination: "fixed" as const };
+    case "departure-long":
+      return { pickup: CAMPUS_LOCATIONS as readonly string[], destination: PICKUP_LOCATIONS as readonly string[] };
+    case "local-return":
+      return { pickup: CITY_LOCATIONS as readonly string[], destination: CAMPUS_LOCATIONS as readonly string[] };
+    case "local-departure":
+      return { pickup: CAMPUS_LOCATIONS as readonly string[], destination: CITY_LOCATIONS as readonly string[] };
+  }
+}
 
 function pad(n: number) {
   return String(n).padStart(2, "0");
@@ -37,6 +77,16 @@ function buildDepartureDate(dateStr: string, hour: number, minute: number, ampm:
   let hour24 = hour % 12;
   if (ampm === "PM") hour24 += 12;
   return new Date(y, m - 1, d, hour24, minute, 0, 0);
+}
+
+// Convenience defaults, local trips only (long-distance keeps the old plain
+// 9:00 AM default — arrival/departure times there are dictated by the
+// train/flight/bus, not a typical daily routine): returning to campus in the
+// evening, heading out early afternoon. Still just a starting point — fully
+// editable either way.
+function defaultTime(listingType: string, direction: string): { hour: number; ampm: "AM" | "PM" } {
+  if (listingType !== "local") return { hour: 9, ampm: "AM" };
+  return direction === "to-campus" ? { hour: 9, ampm: "PM" } : { hour: 2, ampm: "PM" };
 }
 
 const today = new Date();
@@ -68,15 +118,24 @@ function NewTripForm() {
   const searchParams = useSearchParams();
   const { data: session } = useSession();
 
-  // Prefill from the arrivals board's "Create a trip for this group" action.
+  // Prefill from the arrivals board's "Create a trip for this group" action,
+  // or from the homepage's new "going out / returning" entry points.
   const prefillPickup = searchParams.get("pickupLocation");
   const prefillDeparture = searchParams.get("departureTime");
   const prefillDate = prefillDeparture ? new Date(prefillDeparture) : null;
+  const prefillListingType = searchParams.get("listingType");
+  const prefillDirection = searchParams.get("direction");
 
   const [form, setForm] = useState<{
     mode: string;
     vehicleType: string;
+    listingType: (typeof LISTING_TYPES)[number];
+    direction: (typeof DIRECTIONS)[number];
+    travelType: (typeof TRAVEL_TYPES)[number];
     pickupLocation: string;
+    pickupOther: string;
+    destination: string;
+    destinationOther: string;
     dateStr: string;
     hour: number;
     minute: number;
@@ -85,23 +144,33 @@ function NewTripForm() {
     flightNumber: string;
     totalCapacity: number;
     numTravelers: number;
-    companionEmails: string[];
     girlsOnly: boolean;
     expectedFare: string;
   }>(() => {
+    const listingType: (typeof LISTING_TYPES)[number] =
+      prefillListingType === "local" ? "local" : "long-distance";
+    const direction: (typeof DIRECTIONS)[number] =
+      prefillDirection === "from-campus" ? "from-campus" : "to-campus";
+    const { pickup, destination } = locationConfig(listingType, direction);
+    const { hour: defaultHour, ampm: defaultAmpm } = defaultTime(listingType, direction);
     const base = {
       mode: "train",
       vehicleType: "",
-      pickupLocation: (prefillPickup as string) || DEFAULT_PICKUP_BY_MODE.train,
-      dateStr: "",
-      hour: 9,
+      listingType,
+      direction,
+      travelType: "leisure" as (typeof TRAVEL_TYPES)[number],
+      pickupLocation: (prefillPickup as string) || (listingType === "long-distance" && direction === "to-campus" ? DEFAULT_PICKUP_BY_MODE.train : pickup[0]),
+      pickupOther: "",
+      destination: destination === "fixed" ? "" : destination[0],
+      destinationOther: "",
+      dateStr: toDateInputValue(today),
+      hour: defaultHour,
       minute: 0,
-      ampm: "AM" as "AM" | "PM",
+      ampm: defaultAmpm as "AM" | "PM",
       trainNumber: "",
       flightNumber: "",
       totalCapacity: 3,
       numTravelers: 1,
-      companionEmails: [],
       girlsOnly: false,
       expectedFare: "",
     };
@@ -123,6 +192,16 @@ function NewTripForm() {
   const perPersonShare = form.numTravelers > 0 ? fareNumber / form.numTravelers : 0;
   const departureDate = buildDepartureDate(form.dateStr, form.hour, form.minute, form.ampm);
 
+  const combo = resolveTripCombo(form.listingType, form.direction);
+  const locations = locationConfig(form.listingType, form.direction);
+  const effectivePickup = form.pickupLocation === "Others" ? form.pickupOther.trim() : form.pickupLocation;
+  const effectiveDestination =
+    locations.destination === "fixed"
+      ? DEFAULT_DESTINATION
+      : form.destination === "Others"
+        ? form.destinationOther.trim()
+        : form.destination;
+
   const [similarTrips, setSimilarTrips] = useState<SimilarTrip[]>([]);
   const [similarDismissed, setSimilarDismissed] = useState(false);
 
@@ -136,10 +215,16 @@ function NewTripForm() {
       setSimilarTrips([]);
       return;
     }
+    if (!effectivePickup) {
+      setSimilarTrips([]);
+      return;
+    }
     setSimilarDismissed(false);
     const params = new URLSearchParams({
-      pickupLocation: form.pickupLocation,
+      pickupLocation: effectivePickup,
       targetTime: departureDate.toISOString(),
+      direction: form.direction,
+      listingType: form.listingType,
     });
     const timeout = setTimeout(() => {
       fetch(`/api/trips?${params.toString()}`)
@@ -149,18 +234,68 @@ function NewTripForm() {
     }, 500);
     return () => clearTimeout(timeout);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [form.pickupLocation, form.dateStr, form.hour, form.minute, form.ampm, confirming]);
+  }, [effectivePickup, form.dateStr, form.hour, form.minute, form.ampm, form.direction, form.listingType, confirming]);
 
-  function updateCompanionCount(numTravelers: number) {
-    const companionCount = Math.max(0, numTravelers - 1);
-    setForm((f) => ({
-      ...f,
-      numTravelers,
-      companionEmails: Array.from(
-        { length: companionCount },
-        (_, i) => f.companionEmails[i] || ""
-      ),
-    }));
+  // Local trips only: "N people on this route might want to join" — same
+  // debounce pattern as similarTrips above, against the arrivals board's
+  // directional route-match instead of other trips. Answers "I've already
+  // booked a vehicle, is anyone outside?" right where a host is listing one.
+  const [nearbyArrivals, setNearbyArrivals] = useState<{ exact: unknown[]; nearby: unknown[] }>({
+    exact: [],
+    nearby: [],
+  });
+  const [nearbyDismissed, setNearbyDismissed] = useState(false);
+  useEffect(() => {
+    if (confirming || form.listingType !== "local" || !departureDate || departureDate.getTime() <= Date.now() || !effectivePickup) {
+      setNearbyArrivals({ exact: [], nearby: [] });
+      return;
+    }
+    setNearbyDismissed(false);
+    const params = new URLSearchParams({
+      location: effectivePickup,
+      direction: form.direction,
+      listingType: form.listingType,
+      targetTime: departureDate.toISOString(),
+      directional: "true",
+    });
+    const timeout = setTimeout(() => {
+      fetch(`/api/arrivals?${params.toString()}`)
+        .then((r) => (r.ok ? r.json() : null))
+        .then((data) => setNearbyArrivals({ exact: data?.exact || [], nearby: data?.nearby || [] }))
+        .catch(() => {});
+    }, 500);
+    return () => clearTimeout(timeout);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [effectivePickup, form.dateStr, form.hour, form.minute, form.ampm, form.direction, form.listingType, confirming]);
+  const nearbyArrivalsCount = nearbyArrivals.exact.length + nearbyArrivals.nearby.length;
+
+  // Switching trip type or direction changes which location lists apply, so
+  // pickup/destination reset to a valid default for the new combo rather than
+  // silently keeping a now-invalid value.
+  function updateTripType(listingType: (typeof LISTING_TYPES)[number], direction: (typeof DIRECTIONS)[number]) {
+    const { pickup, destination } = locationConfig(listingType, direction);
+    const { hour, ampm } = defaultTime(listingType, direction);
+    setForm((f) => {
+      // Recommended capacity differs between local/long-distance for the same
+      // vehicle, so switching trip type re-derives it too (if a vehicle is
+      // already picked) — same as picking a different vehicle outright.
+      const recommended = f.vehicleType ? recommendedCapacity(listingType, f.vehicleType) : undefined;
+      const totalCapacity = recommended ?? f.totalCapacity;
+      return {
+        ...f,
+        listingType,
+        direction,
+        pickupLocation: pickup[0],
+        pickupOther: "",
+        destination: destination === "fixed" ? "" : destination[0],
+        destinationOther: "",
+        hour,
+        minute: 0,
+        ampm,
+        totalCapacity,
+        numTravelers: Math.min(f.numTravelers, Math.max(1, totalCapacity - 1)),
+      };
+    });
   }
 
   function handleReview(e: React.FormEvent) {
@@ -179,6 +314,14 @@ function NewTripForm() {
       setError("Leave at least one seat open for someone else to join.");
       return;
     }
+    if (!effectivePickup) {
+      setError("Pick a pickup location.");
+      return;
+    }
+    if (locations.destination !== "fixed" && !effectiveDestination) {
+      setError("Pick a destination.");
+      return;
+    }
 
     setConfirming(true);
   }
@@ -192,16 +335,19 @@ function NewTripForm() {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        mode: form.mode,
+        mode: form.listingType === "local" ? "bus" : form.mode,
         vehicleType: form.vehicleType,
-        pickupLocation: form.pickupLocation,
+        listingType: form.listingType,
+        direction: form.direction,
+        travelType: form.travelType,
+        pickupLocation: effectivePickup,
+        destination: locations.destination === "fixed" ? undefined : effectiveDestination,
         departureTime: departureDate.toISOString(),
         trainNumber: form.trainNumber,
         flightNumber: form.flightNumber,
         totalCapacity: Number(form.totalCapacity),
         numTravelers: Number(form.numTravelers),
         expectedFare: fareNumber,
-        companionEmails: form.companionEmails.filter((e) => e.trim() !== ""),
         girlsOnly: form.girlsOnly,
       }),
     });
@@ -217,7 +363,7 @@ function NewTripForm() {
       return;
     }
 
-    router.push(`/trips/${data.trip._id}`);
+    router.push(`/trips/${data.trip._id}?created=true`);
   }
 
   return (
@@ -230,29 +376,92 @@ function NewTripForm() {
           <form onSubmit={handleReview} className="mt-4 space-y-4">
             <div>
               <label className="block text-sm font-medium">
-                Mode <span className="text-red-500">*</span>
+                Trip type <span className="text-red-500">*</span>
               </label>
               <select
                 className="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 dark:border-gray-700 dark:bg-gray-900"
-                value={form.mode}
-                onChange={(e) => {
-                  const mode = e.target.value;
-                  setForm((f) => ({
-                    ...f,
-                    mode,
-                    pickupLocation: DEFAULT_PICKUP_BY_MODE[mode] || f.pickupLocation,
-                  }));
-                }}
+                value={form.listingType}
+                onChange={(e) => updateTripType(e.target.value as (typeof LISTING_TYPES)[number], form.direction)}
               >
-                {TRIP_MODES.map((m) => (
-                  <option key={m} value={m}>
-                    {MODE_LABELS[m]}
+                {LISTING_TYPES.map((lt) => (
+                  <option key={lt} value={lt}>
+                    {LISTING_TYPE_LABELS[lt]}
                   </option>
                 ))}
               </select>
             </div>
 
-            {form.mode === "train" && (
+            <div>
+              <label className="block text-sm font-medium">
+                Direction <span className="text-red-500">*</span>
+              </label>
+              <div className="mt-1 grid grid-cols-2 gap-2">
+                {DIRECTIONS.map((d) => (
+                  <button
+                    key={d}
+                    type="button"
+                    onClick={() => updateTripType(form.listingType, d)}
+                    className={`rounded-md border px-3 py-2 text-sm ${
+                      form.direction === d
+                        ? "border-brand-600 bg-brand-50 text-brand-700 dark:border-brand-500 dark:bg-brand-950 dark:text-brand-400"
+                        : "border-gray-300 dark:border-gray-700"
+                    }`}
+                  >
+                    {DIRECTION_LABELS[d]}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium">Type of travel</label>
+              <div className="mt-1 grid grid-cols-2 gap-2">
+                {TRAVEL_TYPES.map((t) => (
+                  <button
+                    key={t}
+                    type="button"
+                    onClick={() => setForm({ ...form, travelType: t })}
+                    className={`rounded-md border px-3 py-2 text-sm capitalize ${
+                      form.travelType === t
+                        ? "border-brand-600 bg-brand-50 text-brand-700 dark:border-brand-500 dark:bg-brand-950 dark:text-brand-400"
+                        : "border-gray-300 dark:border-gray-700"
+                    }`}
+                  >
+                    {t}
+                  </button>
+                ))}
+              </div>
+              <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">{TRAVEL_TYPE_DELAY_HINTS[form.travelType]}.</p>
+            </div>
+
+            {form.listingType === "long-distance" && (
+              <div>
+                <label className="block text-sm font-medium">
+                  Mode <span className="text-red-500">*</span>
+                </label>
+                <select
+                  className="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 dark:border-gray-700 dark:bg-gray-900"
+                  value={form.mode}
+                  onChange={(e) => {
+                    const mode = e.target.value;
+                    setForm((f) => ({
+                      ...f,
+                      mode,
+                      pickupLocation:
+                        f.direction === "to-campus" ? DEFAULT_PICKUP_BY_MODE[mode] || f.pickupLocation : f.pickupLocation,
+                    }));
+                  }}
+                >
+                  {TRIP_MODES.map((m) => (
+                    <option key={m} value={m}>
+                      {MODE_LABELS[m]}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
+
+            {form.listingType === "long-distance" && form.mode === "train" && (
               <div>
                 <label className="block text-sm font-medium">Train number (optional)</label>
                 <input
@@ -262,7 +471,7 @@ function NewTripForm() {
                 />
               </div>
             )}
-            {form.mode === "flight" && (
+            {form.listingType === "long-distance" && form.mode === "flight" && (
               <div>
                 <label className="block text-sm font-medium">Flight number (optional)</label>
                 <input
@@ -281,7 +490,19 @@ function NewTripForm() {
                 required
                 className="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 dark:border-gray-700 dark:bg-gray-900"
                 value={form.vehicleType}
-                onChange={(e) => setForm({ ...form, vehicleType: e.target.value })}
+                onChange={(e) => {
+                  const vehicleType = e.target.value;
+                  const recommended = recommendedCapacity(form.listingType, vehicleType);
+                  setForm((f) => {
+                    const totalCapacity = recommended ?? f.totalCapacity;
+                    return {
+                      ...f,
+                      vehicleType,
+                      totalCapacity,
+                      numTravelers: Math.min(f.numTravelers, Math.max(1, totalCapacity - 1)),
+                    };
+                  });
+                }}
               >
                 <option value="" disabled>
                   Select
@@ -292,7 +513,7 @@ function NewTripForm() {
                   </option>
                 ))}
               </select>
-              {form.vehicleType && RECOMMENDED_CAPACITY[form.vehicleType] && (
+              {form.listingType !== "local" && form.vehicleType && RECOMMENDED_CAPACITY[form.vehicleType] && (
                 <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
                   Recommended capacity: {RECOMMENDED_CAPACITY[form.vehicleType]} people (reduced from the max
                   because of luggage constraints — you can still change it below).
@@ -309,17 +530,59 @@ function NewTripForm() {
                 value={form.pickupLocation}
                 onChange={(e) => setForm({ ...form, pickupLocation: e.target.value })}
               >
-                {PICKUP_LOCATIONS.map((loc) => (
+                {locations.pickup.map((loc) => (
                   <option key={loc} value={loc}>
                     {loc}
                   </option>
                 ))}
               </select>
+              {form.pickupLocation === "Others" && (
+                <input
+                  required
+                  placeholder="Type the location"
+                  className="mt-2 w-full rounded-md border border-gray-300 px-3 py-2 dark:border-gray-700 dark:bg-gray-900"
+                  value={form.pickupOther}
+                  onChange={(e) => setForm({ ...form, pickupOther: e.target.value })}
+                />
+              )}
             </div>
+
+            {locations.destination === "fixed" ? (
+              <p className="text-xs text-gray-500 dark:text-gray-400">
+                Drop location is default set to IIT Dharwad Hostels.
+              </p>
+            ) : (
+              <div>
+                <label className="block text-sm font-medium">
+                  Destination <span className="text-red-500">*</span>
+                </label>
+                <select
+                  className="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 dark:border-gray-700 dark:bg-gray-900"
+                  value={form.destination}
+                  onChange={(e) => setForm({ ...form, destination: e.target.value })}
+                >
+                  {locations.destination.map((loc) => (
+                    <option key={loc} value={loc}>
+                      {loc}
+                    </option>
+                  ))}
+                </select>
+                {form.destination === "Others" && (
+                  <input
+                    required
+                    placeholder="Type the location"
+                    className="mt-2 w-full rounded-md border border-gray-300 px-3 py-2 dark:border-gray-700 dark:bg-gray-900"
+                    value={form.destinationOther}
+                    onChange={(e) => setForm({ ...form, destinationOther: e.target.value })}
+                  />
+                )}
+              </div>
+            )}
 
             <div>
               <label className="block text-sm font-medium">
-                Expected arrival date <span className="text-red-500">*</span>
+                {form.direction === "to-campus" ? "Expected arrival date" : "Departure date"}{" "}
+                <span className="text-red-500">*</span>
               </label>
               <input
                 required
@@ -334,7 +597,8 @@ function NewTripForm() {
 
             <div>
               <label className="block text-sm font-medium">
-                Expected arrival time <span className="text-red-500">*</span>
+                {form.direction === "to-campus" ? "Expected arrival time" : "Departure time"}{" "}
+                <span className="text-red-500">*</span>
               </label>
               <div className="mt-1 grid grid-cols-3 gap-2">
                 <select
@@ -406,6 +670,27 @@ function NewTripForm() {
               </div>
             )}
 
+            {form.listingType === "local" && nearbyArrivalsCount > 0 && !nearbyDismissed && (
+              <div className="rounded-lg border border-brand-200 bg-brand-50 p-3 text-sm dark:border-brand-900 dark:bg-brand-950">
+                <div className="flex items-start justify-between gap-2">
+                  <p className="text-brand-700 dark:text-brand-400">
+                    {nearbyArrivalsCount} {nearbyArrivalsCount === 1 ? "person is" : "people are"} currently
+                    posted on this route around this time —{" "}
+                    {form.direction === "to-campus" ? "waiting to come back" : "interested in heading out"} —
+                    they&apos;ll be notified once you list this trip.
+                  </p>
+                  <button
+                    type="button"
+                    onClick={() => setNearbyDismissed(true)}
+                    className="shrink-0 text-brand-600 hover:text-brand-800 dark:text-brand-500 dark:hover:text-brand-300"
+                    aria-label="Dismiss"
+                  >
+                    ×
+                  </button>
+                </div>
+              </div>
+            )}
+
             <div>
               <label className="block text-sm font-medium">
                 Total capacity (incl. you) <span className="text-red-500">*</span>
@@ -442,37 +727,24 @@ function NewTripForm() {
                 max={Math.max(1, form.totalCapacity - 1)}
                 className="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 dark:border-gray-700 dark:bg-gray-900"
                 value={form.numTravelers}
-                onChange={(e) => updateCompanionCount(Number(e.target.value))}
+                onChange={(e) => {
+                  const numTravelers = Number(e.target.value);
+                  setForm((f) => ({
+                    ...f,
+                    numTravelers: Math.min(numTravelers, Math.max(1, f.totalCapacity - 1)),
+                  }));
+                }}
               />
               <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
                 These seats are reserved automatically — remaining seats and fare split update below.
               </p>
             </div>
 
-            {form.companionEmails.map((email, i) => (
-              <div key={i}>
-                <label className="block text-sm font-medium">
-                  Co-traveller {i + 1}&apos;s IIT Dharwad email <span className="text-red-500">*</span>
-                </label>
-                <input
-                  required
-                  type="email"
-                  placeholder="rollno@iitdh.ac.in"
-                  className="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 dark:border-gray-700 dark:bg-gray-900"
-                  value={email}
-                  onChange={(e) => {
-                    const companionEmails = [...form.companionEmails];
-                    companionEmails[i] = e.target.value;
-                    setForm({ ...form, companionEmails });
-                  }}
-                />
-              </div>
-            ))}
-            {form.companionEmails.length > 0 && (
-              <p className="-mt-2 text-xs text-gray-500 dark:text-gray-400">
-                If they already have an account, their seat is reserved instantly. If not, you&apos;ll
-                get a link after listing to share with them yourself (WhatsApp, text, etc.).
-              </p>
+            {form.numTravelers > 1 && (
+              <ShareCTA
+                blurb="Please ask your fellow friends to onboard CoRide too — that's how they'll see this trip and get their own seat confirmed."
+                pitch="Join me on CoRide — sign up so you can see my trip and get your own seat confirmed:"
+              />
             )}
 
             <div>
@@ -508,10 +780,6 @@ function NewTripForm() {
               </label>
             )}
 
-            <p className="text-xs text-gray-500 dark:text-gray-400">
-              Drop location is default set to IIT Dharwad Hostels.
-            </p>
-
             {error && <p className="text-sm text-red-600 dark:text-red-400">{error}</p>}
 
             <button
@@ -527,27 +795,41 @@ function NewTripForm() {
               <h2 className="text-sm font-semibold">Review your listing</h2>
               <dl className="mt-3 space-y-2 text-sm">
                 <div className="flex justify-between gap-4">
-                  <dt className="text-gray-500 dark:text-gray-400">Mode</dt>
-                  <dd className="text-right">{MODE_LABELS[form.mode]} · {form.vehicleType}</dd>
+                  <dt className="text-gray-500 dark:text-gray-400">Trip type</dt>
+                  <dd className="text-right">
+                    {LISTING_TYPE_LABELS[form.listingType]} · {DIRECTION_LABELS[form.direction]}
+                  </dd>
                 </div>
+                {form.listingType === "long-distance" && (
+                  <div className="flex justify-between gap-4">
+                    <dt className="text-gray-500 dark:text-gray-400">Mode</dt>
+                    <dd className="text-right">{MODE_LABELS[form.mode]} · {form.vehicleType}</dd>
+                  </div>
+                )}
+                {form.listingType === "local" && (
+                  <div className="flex justify-between gap-4">
+                    <dt className="text-gray-500 dark:text-gray-400">Vehicle</dt>
+                    <dd className="text-right">{form.vehicleType}</dd>
+                  </div>
+                )}
                 <div className="flex justify-between gap-4">
                   <dt className="text-gray-500 dark:text-gray-400">Route</dt>
-                  <dd className="text-right">{form.pickupLocation} → IIT Dharwad Hostels</dd>
+                  <dd className="text-right">{effectivePickup} → {effectiveDestination}</dd>
                 </div>
                 <div className="flex justify-between gap-4">
-                  <dt className="text-gray-500 dark:text-gray-400">Departure</dt>
+                  <dt className="text-gray-500 dark:text-gray-400">Type of travel</dt>
+                  <dd className="text-right capitalize">{form.travelType}</dd>
+                </div>
+                <div className="flex justify-between gap-4">
+                  <dt className="text-gray-500 dark:text-gray-400">
+                    {form.direction === "to-campus" ? "Arrival" : "Departure"}
+                  </dt>
                   <dd className="text-right">{departureDate?.toLocaleString()}</dd>
                 </div>
                 <div className="flex justify-between gap-4">
                   <dt className="text-gray-500 dark:text-gray-400">Capacity</dt>
                   <dd className="text-right">{form.numTravelers} of {form.totalCapacity} seats (you + {form.numTravelers - 1} companion{form.numTravelers - 1 === 1 ? "" : "s"})</dd>
                 </div>
-                {form.companionEmails.filter((e) => e.trim()).length > 0 && (
-                  <div className="flex justify-between gap-4">
-                    <dt className="text-gray-500 dark:text-gray-400">Companions</dt>
-                    <dd className="break-words text-right">{form.companionEmails.filter((e) => e.trim()).join(", ")}</dd>
-                  </div>
-                )}
                 <div className="flex justify-between gap-4">
                   <dt className="text-gray-500 dark:text-gray-400">Fare</dt>
                   <dd className="text-right">₹{fareNumber} total · ₹{perPersonShare.toFixed(0)} each so far</dd>

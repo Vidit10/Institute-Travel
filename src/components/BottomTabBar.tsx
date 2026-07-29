@@ -64,7 +64,7 @@ export default function BottomTabBar() {
           <PinIcon />
           Arrivals
         </Link>
-        <Link href="/trips/new" className="flex flex-col items-center justify-center" aria-label="List a trip">
+        <Link href="/trips/new?listingType=local" className="flex flex-col items-center justify-center" aria-label="List a trip">
           <span className="-mt-6 flex h-12 w-12 items-center justify-center rounded-full bg-brand-600 text-white shadow-lg">
             <PlusIcon />
           </span>
