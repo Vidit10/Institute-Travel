@@ -24,6 +24,8 @@ scope and what's explicitly deferred.
   - `TripReview` — a post-trip check-in, one per `{tripId, userId}` (see the post-trip
     reviews bullet below)
   - `Recommendation` — a restaurant/place-to-visit board entry, no relation to Trip/ArrivalIntent
+  - `Event` / `EventRSVP` — a generic "list a happening, others RSVP" activity, no relation to
+    Trip (see the Events bullet below)
   - `PushSubscription` — web-push endpoints per user
   - `AbuseLog` — rate-limit lockout records (see the rate-limiting bullet below)
   - **No data-deletion cron, and don't add one for "cleanup."** The existing cron
@@ -84,10 +86,23 @@ scope and what's explicitly deferred.
   enforced by a partial unique index on `{ userId }` (not per-location) — posting again, even
   at a different location or a different direction/listingType, replaces the existing entry
   rather than adding a second. There is no standalone `/arrivals` route — `ArrivalsBoard` is
-  mounted three times directly on the home page (`src/app/page.tsx`), one instance per
-  section; don't duplicate its browsing/posting logic in a new page instead of adding a prop
-  to it. `ArrivalForm` is the shared post form used inside every `ArrivalsBoard` instance —
-  extend it, don't fork it.
+  rendered from `src/components/ArrivalsTabs.tsx`, a 3-way tab switcher mounted once on the
+  home page (`src/app/page.tsx`) that renders only the active tab's `ArrivalsBoard` instance
+  (the shared `myEntries`/profile fetch stays in `page.tsx` and flows down as props, same as
+  before — only the number of simultaneously-mounted boards changed, from three stacked to
+  one at a time). Don't duplicate browsing/posting logic in a new page or component instead of
+  adding a prop to `ArrivalsBoard`/`ArrivalsTabs`. `ArrivalForm` is the shared post form used
+  inside every `ArrivalsBoard` instance — extend it, don't fork it.
+- **Quick actions & ID card** (`src/components/QuickActions.tsx`,
+  `src/components/IDCardViewer.tsx`, `src/lib/idCardStore.ts`): a home-page row of secondary
+  off-app links (bus tracker, SAM portal — both plain `target="_blank"` links, no
+  integration) plus the ID card viewer, also linked from `src/app/settings/page.tsx`. The ID
+  card is stored **client-side only**, in IndexedDB via `idCardStore.ts` — there is no API
+  route for it and there must not be one added casually; if a server-side copy is ever
+  proposed, that's a deliberate privacy/cost tradeoff decision, not a default. The "brightness
+  boost" on the full-screen viewer is a pure-white background + `navigator.wakeLock`, not real
+  brightness control — no browser exposes a brightness API, don't try to add one via a
+  polyfill/hack; the UI copy is honest about this and should stay that way.
 - **Location clustering** (`LOCATION_CLUSTERS`, `getClusterMates()` in `src/lib/constants.ts`):
   opt-in only — `/api/arrivals`'s detail route only fetches cluster-mate entries when the
   client explicitly passes `includeCluster=true`, and always filters them through the same
@@ -117,6 +132,16 @@ scope and what's explicitly deferred.
   `src/app/feedback/page.tsx`): a fixed enum kept in sync across all three files — there's no
   resolve/dismiss action yet, so every category (including `profile_correction`, see
   SPEC.md's feedback section) still ultimately needs a manual look in Mongo to act on.
+- **Events** (`src/models/Event.ts`, `src/models/EventRSVP.ts`, `src/lib/eventRsvp.ts`,
+  `src/lib/eventValidation.ts`, `src/app/api/events/**`, `src/app/events/**`): a generic
+  activity listing, deliberately separate from Trip — no fare/vehicle/girls-only/consent-gated
+  contact reveal. RSVP is open (no host approval), but capacity is still claimed with the same
+  atomic conditional `findOneAndUpdate` pattern as `src/lib/tripRequests.ts`'s seat count —
+  see `src/lib/eventRsvp.ts`'s `joinEvent`/`leaveEvent`, covered by
+  `tests/eventRsvp.test.ts` the same way `tests/tripRequests.test.ts` covers Trip's
+  concurrency. Don't add a moderation queue or phone-number reveal to this without a real
+  reason — both were deliberately left out (see SPEC.md's Events section for why). The
+  existing expire-requests cron also completes past events; don't add a second cron for this.
 
 ## Local setup
 

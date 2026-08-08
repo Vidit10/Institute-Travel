@@ -6,3 +6,15 @@ html,
 body {
   height: 100%;
 }
+
+/* iOS Safari zooms the whole page in when a focused form control's font-size
+   is under 16px — nearly every input/select/textarea in this app uses
+   Tailwind's text-sm (14px). Force 16px specifically on small viewports
+   (phones) rather than site-wide, so desktop's visual density is untouched. */
+@media (max-width: 640px) {
+  input,
+  select,
+  textarea {
+    font-size: 16px;
+  }
+}

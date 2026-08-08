@@ -296,3 +296,29 @@ export const YEARS = [...new Set(Object.values(YEAR_OPTIONS_BY_PROGRAM).flat())]
   string,
   ...string[],
 ];
+
+// Events (src/models/Event.ts, src/models/EventRSVP.ts) — generic "list a
+// happening, others RSVP" activities (e.g. a cricket match), distinct from
+// Trip: no fare/vehicle/seat-race machinery, open RSVP instead of host
+// approval. See docs/SPEC.md's Events section.
+export const EVENT_CATEGORIES = ["sports", "social", "academic", "other"] as const;
+export const EVENT_CATEGORY_LABELS: Record<(typeof EVENT_CATEGORIES)[number], string> = {
+  sports: "Sports",
+  social: "Social",
+  academic: "Academic",
+  other: "Something else",
+};
+
+export const EVENT_STATUSES = ["open", "full", "cancelled", "completed"] as const;
+// Mirrors ACTIVE_TRIP_STATUSES — still joinable or full but not yet
+// completed/cancelled, used for the per-host active-event cap below.
+export const ACTIVE_EVENT_STATUSES = ["open", "full"] as const;
+
+export const MAX_EVENT_TITLE_LENGTH = 100;
+export const MAX_EVENT_DESCRIPTION_LENGTH = 500;
+// Longer than Trip's MAX_ADVANCE_DAYS (30) — an event like a fest may
+// reasonably be planned further out than a ride ever is.
+export const MAX_EVENT_ADVANCE_DAYS = 60;
+// Same reasoning as MAX_ACTIVE_TRIPS_PER_HOST — keeps a host from
+// accumulating an unbounded number of simultaneous listings.
+export const MAX_ACTIVE_EVENTS_PER_HOST = 5;

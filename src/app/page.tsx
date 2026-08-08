@@ -6,10 +6,11 @@ import { useSession } from "next-auth/react";
 import NavBar from "@/components/NavBar";
 import PushSubscribe from "@/components/PushSubscribe";
 import LoadingScreen from "@/components/LoadingScreen";
-import ArrivalsBoard from "@/components/ArrivalsBoard";
 import { type ArrivalEntry } from "@/components/ArrivalForm";
 import PostTripReviewPrompt from "@/components/PostTripReviewPrompt";
 import InviteFriendsPrompt from "@/components/InviteFriendsPrompt";
+import QuickActions from "@/components/QuickActions";
+import ArrivalsTabs from "@/components/ArrivalsTabs";
 import {
   PICKUP_LOCATIONS,
   CAMPUS_LOCATIONS,
@@ -174,8 +175,8 @@ export default function HomePage() {
 
   const [isFemale, setIsFemale] = useState(false);
   const [girlsOnlyDefault, setGirlsOnlyDefault] = useState(false);
-  // Fetched once here and passed to every ArrivalsBoard instance below — all
-  // three need the same profile fields and the same single active entry
+  // Fetched once here and passed down to ArrivalsTabs — every board it
+  // renders needs the same profile fields and the same single active entry
   // (ArrivalIntent is still one-per-user across every board), so one fetch
   // instead of three redundant ones.
   const [myEntries, setMyEntries] = useState<ArrivalEntry[]>([]);
@@ -281,11 +282,9 @@ export default function HomePage() {
           {tagline}
         </h1>
 
-        <ArrivalsBoard
-          listingType="local"
-          initialDirection="to-campus"
-          title="Are you outside right now?"
-          blurb="Let the community know and find fellow folks who might be returning as well, and pool a ride with them."
+        <QuickActions />
+
+        <ArrivalsTabs
           isFemale={isFemale}
           girlsOnlyDefault={girlsOnlyDefault}
           myEntries={myEntries}
@@ -296,39 +295,17 @@ export default function HomePage() {
         <div className="mt-3">
           <Link
             href="/trips/new?listingType=local"
-            className="text-sm text-brand-600 hover:underline dark:text-brand-500"
+            className="flex items-center justify-center rounded-lg border border-brand-600 px-4 py-2.5 text-sm font-medium text-brand-600 hover:bg-brand-50 dark:border-brand-500 dark:text-brand-500 dark:hover:bg-brand-950"
           >
             Already booked a vehicle? List it →
           </Link>
         </div>
 
-        <ArrivalsBoard
-          listingType="local"
-          initialDirection="from-campus"
-          title="Heading out?"
-          blurb="Haven't booked a vehicle yet — say so and find fellow folks who might want to share the ride out."
-          isFemale={isFemale}
-          girlsOnlyDefault={girlsOnlyDefault}
-          myEntries={myEntries}
-          onPosted={handleArrivalPosted}
-          onWithdrawn={handleArrivalPosted}
-        />
+        <hr className="mt-6 border-gray-200 dark:border-gray-800" />
 
-        <ArrivalsBoard
-          listingType="long-distance"
-          initialDirection="to-campus"
-          allowDirectionToggle
-          showClusterExpansion
-          title="Going home or coming back?"
-          blurb="For longer trips — train, flight, or bus. Log your travel time and see who else is around."
-          isFemale={isFemale}
-          girlsOnlyDefault={girlsOnlyDefault}
-          myEntries={myEntries}
-          onPosted={handleArrivalPosted}
-          onWithdrawn={handleArrivalPosted}
-        />
-
-        <h2 className="mt-4 text-lg font-semibold">Upcoming trips</h2>
+        <h2 className="mt-6 text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
+          Browse all trips
+        </h2>
 
         {isFiltered && (
           <div className="mt-2 flex items-center justify-between gap-2 rounded-lg bg-gray-100 px-3 py-2 text-sm text-gray-600 dark:bg-gray-800 dark:text-gray-300">

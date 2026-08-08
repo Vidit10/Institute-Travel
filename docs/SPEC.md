@@ -185,12 +185,15 @@ discovery board, not a booking: once a group looks worth combining, anyone in it
 convert it into a real Trip listing, which is where the actual concurrency-safe seat/fare/
 consent machinery lives.
 
-There is no standalone `/arrivals` page — this board lives directly on the home page, as
-three separate sections (`src/components/ArrivalsBoard.tsx`, one instance per section, see
-§12), not one combo-switcher. A prior version had a single page trying to be both the
-long-distance board and the local day-to-day board at once (trip-type chips, direction
-chips, location chips, and a form all stacked) — split into three focused sections instead
-of simplifying that one page's UI.
+There is no standalone `/arrivals` page — this board lives directly on the home page, behind
+a 3-way tab switcher (`src/components/ArrivalsTabs.tsx`) that renders one
+`src/components/ArrivalsBoard.tsx` instance at a time for the active tab, see §12. A prior
+version had a single page trying to be both the long-distance board and the local day-to-day
+board at once (trip-type chips, direction chips, location chips, and a form all stacked) —
+split into three focused sections when the board first moved to the home page, then (once all
+three stacked at once turned out to be its own "too much to scroll past" problem) collapsed
+back into tabs so only one section renders at a time. `ArrivalsBoard` itself is unchanged by
+this — it's just how many instances are mounted simultaneously.
 
 - **One active entry per person, full stop** — a person can only be arriving/heading out at
   one place at a time, across *every* section. Posting in one section replaces whatever was
@@ -226,15 +229,19 @@ of simplifying that one page's UI.
 
 ## 12. Home page & navigation
 
-- **Home page**: a personalized greeting, then three arrivals-board sections ahead of
-  everything else — "Are you outside right now?" (local, to-campus), "Heading out?" (local,
-  from-campus, with a plain "Already booked a vehicle? List it →" link into `/trips/new`
-  next to it), and "Going home or coming back?" (long-distance, with its own
-  to-campus/from-campus toggle — kept as a separate section rather than folded into the
-  local toggle, since it's a different-enough use case — once/twice a semester, its own
-  location list — that merging it back in would recreate the clutter the split was meant to
-  fix; see §11). Below that, the full open-trips feed is shown by default, with a
-  time/location search collapsed behind a toggle rather than always visible.
+- **Home page**: a personalized greeting, then a **quick actions row** (§23 — bus tracker,
+  SAM portal, ID card; small/secondary, not the page's main content), then the arrivals board
+  as a 3-way tab switcher ahead of everything else — "Are you outside right now?" (local,
+  to-campus), "Heading out?" (local, from-campus), and "Going home or coming back?"
+  (long-distance, with its own to-campus/from-campus toggle — kept as a separate tab rather
+  than folded into the local toggle, since it's a different-enough use case — once/twice a
+  semester, its own location list — that merging it back in would recreate the clutter the
+  split was meant to fix; see §11), plus a "Already booked a vehicle? List it →" button below
+  the tabs. Below a divider, the full open-trips feed is shown by default under a "Browse all
+  trips" heading, with a time/location search collapsed behind a toggle rather than always
+  visible. This structure (quick actions → primary arrivals/list action → de-emphasized
+  browse-everything feed) replaced an earlier version that stacked all three arrivals sections
+  plus the feed in one long scroll with no visual hierarchy.
 - **Mobile** (below the `sm` breakpoint): a fixed bottom tab bar — Home, Recommendations, a
   center "List a trip" action, My Rides, Account. (Arrivals no longer has a tab — it's not a
   standalone page anymore, see §11 — and Recommendations, previously reachable only via the
@@ -448,7 +455,7 @@ Two matching modes:
   request notifications) that a ride is now available, capped at ~20 recipients. The reverse
   (notifying a host about a new nearby arrivals-board post) is deliberately not built —
   deferred to avoid notification spam from casual browsing posts.
-- Homepage (§12) leads with three full `ArrivalsBoard` sections (§11), ahead of the open-trips
+- Homepage (§12) leads with the tabbed `ArrivalsBoard` switcher (§11), ahead of the open-trips
   feed — post *and* browse inline, not just a count or a link out to another page.
 - The homepage's collapsible time/location search also got a trip-type/direction selector,
   same pattern as the arrivals board and trip creation form, so it can search local trips too
@@ -457,3 +464,75 @@ Two matching modes:
 - `/trips/new` shows a second nudge (alongside the existing same-trip duplicate nudge) for
   local trips: "N people on this route might want to join," querying the arrivals board's
   directional mode against the draft trip's own pickup + chosen time.
+
+## 23. Quick actions (bus tracker, SAM portal, ID card)
+
+A small row of secondary, frequent off-app actions (`src/components/QuickActions.tsx`),
+placed on the home page directly below the greeting — not in the bottom tab bar, which is
+reserved for the app's 5 core sections (§12).
+
+- **Bus tracker**: opens the institute bus GPS tracker
+  (`https://peg-iitdh.github.io/EDL2025-GPSTracker/HTML/Bus_Tracking.html`) in a new tab.
+  Just a link — no integration.
+- **SAM portal**: opens `https://sam.iitdh.ac.in/` (the outing-registration portal students
+  must use before leaving campus) in a new tab. No auto-login: institute Google SSO has no
+  session-handoff mechanism into a third-party portal, and iframing it would risk both
+  breakage (frame/CSP headers) and looking like credential phishing. Users log in there
+  themselves, same as if they'd navigated there directly.
+- **ID card** (`src/components/IDCardViewer.tsx`, `src/lib/idCardStore.ts`): lets a user save
+  a photo of their ID card for quick access when a security guard asks to see it on the way
+  out. Stored **only on-device**, in IndexedDB — never uploaded to this app's server or any
+  third party. Upload/replace/remove is also reachable from Settings. Tapping "Show my ID"
+  opens it full-screen on a pure-white background and requests a Screen Wake Lock
+  (`navigator.wakeLock`) to stop the screen sleeping mid-scan. This is **not** real brightness
+  control — there is no web API for that on any platform — it's the same visual trick
+  boarding-pass apps use (a bright white screen tends to read better and often nudges a
+  phone's own auto-brightness up); the UI copy says so rather than overpromising.
+
+## 24. Events
+
+A generalization of the underlying "list something, others join it" idea beyond rides — e.g.
+listing a cricket match. Deliberately a **separate model from Trip**, not a generalization of
+it: Trip's fare/vehicle/seat-concurrency and girls-only machinery is ride-specific and doesn't
+fit a generic activity. Reachable from the Account menu (`/events`), same starting point
+Recommendations had before it was promoted to a bottom-tab slot — no bottom-tab-bar changes in
+this pass.
+
+- **Open RSVP, no host approval** — unlike Trip's request/accept flow, joining an event is
+  immediate. There's no `JoinRequest`-style pending state; `EventRSVP` existence *is* "going,"
+  and leaving deletes the doc outright rather than flipping a status.
+- **Fields**: title, optional description, category (`EVENT_CATEGORIES`: Sports, Social,
+  Academic, Something else), location (free text — an event's venue isn't drawn from a small
+  closed set the way Trip's pickup locations are), optional map link (raw URL, shown as-is,
+  same pattern as Recommendation's `mapLink`), start time (must be in the future, within
+  `MAX_EVENT_ADVANCE_DAYS` — 60, longer than Trip's 30-day window since something like a fest
+  may be planned further out), and an optional capacity (unset = unlimited).
+- **RSVP for a group**: like Trip's `numTravelers`, an RSVP carries a `partySize` — you can
+  RSVP for your own group, not just yourself.
+- **Capacity is claimed atomically**, same concurrency-safe pattern as Trip's seat count (a
+  conditional `findOneAndUpdate` guards against overbooking): a party's `partySize` is
+  deducted from `spotsRemaining` only if enough spots remain, and the event flips to `full`
+  at zero. Leaving an event releases those spots back and flips `full` back to `open`. A
+  capacity-less event skips this step entirely — always joinable until the host cancels it or
+  it completes.
+- **Publishes immediately — no pre-moderation queue.** Events are time-bound and functional
+  like Trips/Arrivals, not evergreen content like Recommendations, so they follow the Trips
+  precedent: live the moment they're created, with the existing "Report a trip, user,
+  recommendation, or event" Feedback category as the after-the-fact safety valve instead of a
+  pending-review gate.
+- **Full RSVP-list visibility, no phone reveal**: the host and every RSVP'd participant see
+  the same list (name/year/program) via `GET /api/events/[id]`. There's no consent-gated
+  contact-info reveal the way Trip has for accepted riders — there's no accept/decline step to
+  gate it on, and it wasn't asked for.
+- **No girls-only toggle for v1** — that's a Trip/Arrivals safety feature specifically for
+  late-night travel coordination; not carried over to generic events unless a real need for it
+  comes up later.
+- **Cancellation**: host-only, notifies every RSVP'd participant (capped at ~20, same
+  reasoning as the arrivals-board notify fan-out). No post-event review — that's Trip-specific
+  and wasn't ported over.
+- **Completion**: the existing cron (`src/app/api/cron/expire-requests/route.ts`) flips events
+  whose start time has passed to `completed` in the same run it already completes trips —
+  no second cron added.
+- **Explicitly not built (deferred, not forgotten)**: pre-publish moderation, editing an event
+  after creation (cancel-and-relist is the precedent, same as Trip), and any bottom-tab-bar
+  placement beyond the Account menu link.

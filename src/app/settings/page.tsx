@@ -5,6 +5,7 @@ import { useSession } from "next-auth/react";
 import Link from "next/link";
 import NavBar from "@/components/NavBar";
 import LoadingScreen from "@/components/LoadingScreen";
+import IDCardViewer from "@/components/IDCardViewer";
 import { PROGRAMS, PROGRAM_LABELS, YEAR_OPTIONS_BY_PROGRAM, YEAR_LABELS } from "@/lib/constants";
 
 export default function SettingsPage() {
@@ -203,6 +204,17 @@ export default function SettingsPage() {
             Save
           </button>
         </form>
+
+        <div className="mt-8">
+          <h2 className="text-sm font-semibold">ID card</h2>
+          <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+            Stored only on this device — never uploaded anywhere. Kept handy for security checks
+            when leaving campus.
+          </p>
+          <div className="mt-2">
+            <IDCardViewer trigger="row" />
+          </div>
+        </div>
       </main>
     </>
   );

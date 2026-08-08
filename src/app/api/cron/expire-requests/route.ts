@@ -3,6 +3,7 @@ import { dbConnect } from "@/lib/mongodb";
 import { JoinRequest } from "@/models/JoinRequest";
 import { Trip } from "@/models/Trip";
 import { ArrivalIntent } from "@/models/ArrivalIntent";
+import { Event } from "@/models/Event";
 import { notifyUser } from "@/lib/notify";
 import { ARRIVAL_INTENT_GRACE_MINUTES } from "@/lib/constants";
 
@@ -96,9 +97,18 @@ export async function GET(req: NextRequest) {
     { status: "expired" }
   );
 
+  // Same "find candidates before updating" pattern as trips above — events
+  // whose start time has passed stop showing as RSVP-able anywhere. No
+  // post-event review nudge is sent (Trip has that; Events doesn't).
+  const eventsToComplete = await Event.updateMany(
+    { status: { $in: ["open", "full"] }, startTime: { $lt: new Date() } },
+    { status: "completed" }
+  );
+
   return NextResponse.json({
     expired: toExpire.length,
     completed: completedResult.modifiedCount,
     expiredArrivals: expiredArrivals.modifiedCount,
+    completedEvents: eventsToComplete.modifiedCount,
   });
 }

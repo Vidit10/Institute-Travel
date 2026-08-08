@@ -40,6 +40,9 @@ function AccountPanelItems({ onNavigate }: { onNavigate: () => void }) {
       <Link href="/recommendations" className={ITEM_CLASS} onClick={onNavigate}>
         Recommendations
       </Link>
+      <Link href="/events" className={ITEM_CLASS} onClick={onNavigate}>
+        Events
+      </Link>
       <Link href="/settings" className={ITEM_CLASS} onClick={onNavigate}>
         Settings
       </Link>
