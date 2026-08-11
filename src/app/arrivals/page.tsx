@@ -417,7 +417,7 @@ function ArrivalsPageInner() {
         {myEntry && !editingArrival && (
           <div className="mt-4 flex items-center justify-between rounded-lg border border-brand-200 bg-brand-50 px-3 py-2 text-sm dark:border-brand-900 dark:bg-brand-950">
             <span>
-              You're posted at <strong>{myEntry.pickupLocation}</strong> around{" "}
+              You&apos;re posted at <strong>{myEntry.pickupLocation}</strong> around{" "}
               {new Date(myEntry.arrivalTime).toLocaleString()}
             </span>
             <div className="flex shrink-0 gap-3">
