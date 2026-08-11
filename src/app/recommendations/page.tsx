@@ -19,6 +19,7 @@ import {
   LEISURE_TYPES,
 } from "@/lib/constants";
 import { RECOMMENDATION_CATEGORY_ACCENT } from "@/lib/categoryColors";
+import { RECOMMENDATION_CATEGORY_ICON } from "@/components/icons";
 
 type Recommendation = {
   _id: string;
@@ -336,10 +337,12 @@ export default function RecommendationsPage() {
         )}
 
         {!loading &&
-          CATEGORY_ORDER.filter((c) => byCategory[c]?.length).map((c) => (
+          CATEGORY_ORDER.filter((c) => byCategory[c]?.length).map((c) => {
+            const CategoryIcon = RECOMMENDATION_CATEGORY_ICON[c];
+            return (
             <div key={c} className="mt-6">
               <h2 className="flex items-center gap-1.5 text-xs font-semibold uppercase text-gray-500 dark:text-gray-400">
-                <span className={`h-1.5 w-1.5 rounded-full ${RECOMMENDATION_CATEGORY_ACCENT[c].dot}`} aria-hidden />
+                <CategoryIcon className={RECOMMENDATION_CATEGORY_ACCENT[c].icon} />
                 {RECOMMENDATION_CATEGORY_LABELS[c]}
               </h2>
               <ul className="mt-2 space-y-2">
@@ -354,7 +357,8 @@ export default function RecommendationsPage() {
                 ))}
               </ul>
             </div>
-          ))}
+            );
+          })}
       </main>
     </>
   );

@@ -8,6 +8,7 @@ import NotificationBell from "./NotificationBell";
 import AccountMenu from "./AccountMenu";
 import BottomTabBar from "./BottomTabBar";
 import HelpButton from "./HelpButton";
+import { BookmarkMenuIcon, CalendarMenuIcon } from "./icons";
 
 function ThemeToggle() {
   const { theme, setTheme } = useTheme();
@@ -66,14 +67,16 @@ export default function NavBar() {
           <div className="hidden items-center gap-3 text-sm sm:flex">
             <Link
               href="/recommendations"
-              className="rounded-md bg-brand-600 px-3 py-1.5 font-medium text-white hover:bg-brand-700"
+              className="inline-flex items-center gap-1.5 rounded-md bg-brand-600 px-3 py-1.5 font-medium text-white hover:bg-brand-700"
             >
+              <BookmarkMenuIcon />
               Recommendations
             </Link>
             <Link
               href="/events"
-              className="rounded-md border border-brand-600 px-3 py-1.5 font-medium text-brand-600 hover:bg-brand-50 dark:text-brand-500 dark:hover:bg-brand-950"
+              className="inline-flex items-center gap-1.5 rounded-md border border-brand-600 px-3 py-1.5 font-medium text-brand-600 hover:bg-brand-50 dark:text-brand-500 dark:hover:bg-brand-950"
             >
+              <CalendarMenuIcon />
               Events
             </Link>
             {session?.user && <NotificationBell />}

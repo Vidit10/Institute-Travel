@@ -5,12 +5,20 @@ import Link from "next/link";
 import NavBar from "@/components/NavBar";
 import RidesTabs from "@/components/RidesTabs";
 import LoadingScreen from "@/components/LoadingScreen";
+import { StatusOkIcon, StatusNoIcon, StatusDotIcon } from "@/components/icons";
 
 const STATUS_LABELS: Record<string, string> = {
   open: "Open",
   full: "Fully booked",
   cancelled: "Cancelled",
   completed: "Completed",
+};
+
+const STATUS_ICON: Record<string, (props: { className?: string }) => React.JSX.Element> = {
+  open: StatusDotIcon,
+  full: StatusDotIcon,
+  cancelled: StatusNoIcon,
+  completed: StatusOkIcon,
 };
 
 type MyTrip = {
@@ -55,7 +63,9 @@ export default function MyTripsPage() {
         )}
 
         <ul className="mt-4 space-y-3">
-          {trips.map((trip) => (
+          {trips.map((trip) => {
+            const StatusIcon = STATUS_ICON[trip.status];
+            return (
             <li key={trip._id}>
               <Link
                 href={`/trips/${trip._id}`}
@@ -63,7 +73,8 @@ export default function MyTripsPage() {
               >
                 <div className="flex flex-wrap items-center justify-between gap-2">
                   <span className="text-sm font-medium uppercase text-brand-600 dark:text-brand-500">{trip.mode}</span>
-                  <span className="text-xs text-gray-500 dark:text-gray-400">
+                  <span className="flex items-center gap-1 text-xs text-gray-500 dark:text-gray-400">
+                    {StatusIcon && <StatusIcon />}
                     {STATUS_LABELS[trip.status] ?? trip.status}
                   </span>
                 </div>
@@ -81,7 +92,8 @@ export default function MyTripsPage() {
                 </p>
               </Link>
             </li>
-          ))}
+            );
+          })}
         </ul>
       </main>
     </>

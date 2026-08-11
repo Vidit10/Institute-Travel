@@ -3,9 +3,10 @@
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { signOut, useSession } from "next-auth/react";
+import { AdminIcon, RidesMenuIcon, BookmarkMenuIcon, CalendarMenuIcon, GearIcon, MessageIcon, SignOutIcon } from "./icons";
 
 const ITEM_CLASS =
-  "block w-full rounded-md px-3 py-2 text-left text-sm text-gray-600 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-800";
+  "flex w-full items-center gap-2.5 rounded-md px-3 py-2 text-left text-sm text-gray-600 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-800";
 
 function UserIcon() {
   return (
@@ -31,22 +32,28 @@ function AccountPanelItems({ onNavigate }: { onNavigate: () => void }) {
     <div className="py-1">
       {session?.user?.isAdmin && (
         <Link href="/admin" className={ITEM_CLASS} onClick={onNavigate}>
+          <AdminIcon className="text-gray-400 dark:text-gray-500" />
           Admin dashboard
         </Link>
       )}
       <Link href="/trips/mine" className={ITEM_CLASS} onClick={onNavigate}>
+        <RidesMenuIcon className="text-gray-400 dark:text-gray-500" />
         My Rides
       </Link>
       <Link href="/recommendations" className={ITEM_CLASS} onClick={onNavigate}>
+        <BookmarkMenuIcon className="text-gray-400 dark:text-gray-500" />
         Recommendations
       </Link>
       <Link href="/events" className={ITEM_CLASS} onClick={onNavigate}>
+        <CalendarMenuIcon className="text-gray-400 dark:text-gray-500" />
         Events
       </Link>
       <Link href="/settings" className={ITEM_CLASS} onClick={onNavigate}>
+        <GearIcon className="text-gray-400 dark:text-gray-500" />
         Settings
       </Link>
       <Link href="/feedback" className={ITEM_CLASS} onClick={onNavigate}>
+        <MessageIcon className="text-gray-400 dark:text-gray-500" />
         Feedback
       </Link>
       {session?.user && (
@@ -54,6 +61,7 @@ function AccountPanelItems({ onNavigate }: { onNavigate: () => void }) {
           onClick={() => signOut({ callbackUrl: "/login" })}
           className={ITEM_CLASS}
         >
+          <SignOutIcon className="text-gray-400 dark:text-gray-500" />
           Sign out
         </button>
       )}

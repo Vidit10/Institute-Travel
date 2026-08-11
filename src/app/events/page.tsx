@@ -7,6 +7,7 @@ import LoadingScreen from "@/components/LoadingScreen";
 import EmptyState from "@/components/EmptyState";
 import { EVENT_CATEGORIES, EVENT_CATEGORY_LABELS } from "@/lib/constants";
 import { EVENT_CATEGORY_ACCENT } from "@/lib/categoryColors";
+import { EVENT_CATEGORY_ICON, StatusDotIcon } from "@/components/icons";
 
 type EventListing = {
   _id: string;
@@ -22,17 +23,20 @@ type EventListing = {
 
 function EventCard({ event }: { event: EventListing }) {
   const full = event.status === "full";
+  const CategoryIcon = EVENT_CATEGORY_ICON[event.category];
   return (
     <Link
       href={`/events/${event._id}`}
       className="block rounded-xl border border-gray-200 bg-white p-4 shadow-sm transition-shadow hover:border-brand-300 hover:shadow-md dark:border-gray-800 dark:bg-gray-900 dark:hover:border-brand-700"
     >
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <span className={`rounded-full px-2.5 py-0.5 text-xs font-medium uppercase ${EVENT_CATEGORY_ACCENT[event.category].badge}`}>
+        <span className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-medium uppercase ${EVENT_CATEGORY_ACCENT[event.category].badge}`}>
+          <CategoryIcon className={EVENT_CATEGORY_ACCENT[event.category].icon} />
           {EVENT_CATEGORY_LABELS[event.category]}
         </span>
         {full && (
-          <span className="rounded-full bg-gray-100 px-2.5 py-1 text-xs font-medium text-gray-700 dark:bg-gray-800 dark:text-gray-200">
+          <span className="inline-flex items-center gap-1 rounded-full bg-gray-100 px-2.5 py-1 text-xs font-medium text-gray-700 dark:bg-gray-800 dark:text-gray-200">
+            <StatusDotIcon className="text-gray-500 dark:text-gray-400" />
             Full
           </span>
         )}

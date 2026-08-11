@@ -171,6 +171,16 @@ scope and what's explicitly deferred.
   shape — and add its route prefix to `HELP_TOPICS` in `helpTopics.ts` so the "?" button's
   context-aware jump (`/help#<topic>`) keeps working. Keep entries brief; this page's value is
   in staying skimmable, not in being complete.
+- **Icons** (`src/components/icons.tsx`): one shared module for small hand-drawn icons —
+  category icons (Recommendations/Events), status icons (open/pending → dot, accepted/
+  completed → check, declined/cancelled/expired → x), and Account-menu/header icons. Hand-drawn
+  (no icon-library dependency) was a deliberate call for load-time reasons — see
+  `memory/decisions-log.md`. Icons are applied **only** to frequently-scanned lists/badges
+  (category badges, status pills, the Account menu, the two desktop header buttons) — explicitly
+  **not** on forms (Settings, Feedback), the 3-item Arrivals tab switcher, one-off action buttons
+  (Save/Cancel), or admin pages. That's not an oversight — those were evaluated and rejected as
+  adding visual weight without adding information. Don't add icons to a new spot without asking
+  the same question: does this help someone scan a list, or is it decoration?
 
 ## Local setup
 

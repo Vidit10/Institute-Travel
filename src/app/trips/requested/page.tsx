@@ -5,6 +5,7 @@ import Link from "next/link";
 import NavBar from "@/components/NavBar";
 import RidesTabs from "@/components/RidesTabs";
 import LoadingScreen from "@/components/LoadingScreen";
+import { StatusOkIcon, StatusNoIcon, StatusDotIcon } from "@/components/icons";
 
 type MyRequest = {
   _id: string;
@@ -27,6 +28,13 @@ const STATUS_STYLES: Record<string, string> = {
   accepted: "bg-green-100 text-green-700 dark:bg-green-950 dark:text-green-300",
   declined: "bg-gray-200 text-gray-600 dark:bg-gray-800 dark:text-gray-400",
   expired: "bg-gray-200 text-gray-600 dark:bg-gray-800 dark:text-gray-500",
+};
+
+const STATUS_ICON: Record<string, (props: { className?: string }) => React.JSX.Element> = {
+  pending: StatusDotIcon,
+  accepted: StatusOkIcon,
+  declined: StatusNoIcon,
+  expired: StatusNoIcon,
 };
 
 export default function RequestedTripsPage() {
@@ -59,7 +67,9 @@ export default function RequestedTripsPage() {
         )}
 
         <ul className="mt-4 space-y-3">
-          {requests.map((r) => (
+          {requests.map((r) => {
+            const StatusIcon = STATUS_ICON[r.status];
+            return (
             <li key={r._id}>
               <Link
                 href={`/trips/${r.trip._id}`}
@@ -72,7 +82,10 @@ export default function RequestedTripsPage() {
                       <span className="rounded bg-red-600 px-1.5 py-0.5 text-[10px] font-medium text-white">New</span>
                     )}
                   </span>
-                  <span className={`rounded px-2 py-0.5 text-xs ${STATUS_STYLES[r.status]}`}>{r.status}</span>
+                  <span className={`flex items-center gap-1 rounded px-2 py-0.5 text-xs ${STATUS_STYLES[r.status]}`}>
+                    {StatusIcon && <StatusIcon />}
+                    {r.status}
+                  </span>
                 </div>
                 <p className="mt-1 break-words font-medium">
                   {r.trip.pickupLocation} → {r.trip.destination}
@@ -88,7 +101,8 @@ export default function RequestedTripsPage() {
                 )}
               </Link>
             </li>
-          ))}
+            );
+          })}
         </ul>
       </main>
     </>

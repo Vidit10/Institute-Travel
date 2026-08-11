@@ -7,6 +7,7 @@ import NavBar from "@/components/NavBar";
 import LoadingScreen from "@/components/LoadingScreen";
 import { EVENT_CATEGORIES, EVENT_CATEGORY_LABELS, YEAR_LABELS, PROGRAM_LABELS } from "@/lib/constants";
 import { EVENT_CATEGORY_ACCENT } from "@/lib/categoryColors";
+import { EVENT_CATEGORY_ICON, StatusOkIcon, StatusNoIcon } from "@/components/icons";
 
 type EventDetail = {
   _id: string;
@@ -124,20 +125,28 @@ export default function EventDetailPage() {
 
   const full = event.status === "full";
   const closed = event.status === "cancelled" || event.status === "completed";
+  const CategoryIcon = EVENT_CATEGORY_ICON[event.category];
 
   return (
     <>
       <NavBar />
       <main className="mx-auto max-w-2xl px-4 py-6 pb-20 sm:pb-6">
-        <span className={`inline-block rounded-full px-2.5 py-0.5 text-xs font-medium uppercase ${EVENT_CATEGORY_ACCENT[event.category].badge}`}>
+        <span className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-medium uppercase ${EVENT_CATEGORY_ACCENT[event.category].badge}`}>
+          <CategoryIcon className={EVENT_CATEGORY_ACCENT[event.category].icon} />
           {EVENT_CATEGORY_LABELS[event.category]}
         </span>
         <h1 className="mt-1 text-xl font-bold">{event.title}</h1>
         {event.status === "cancelled" && (
-          <p className="mt-1 text-sm font-medium text-red-600 dark:text-red-400">Cancelled</p>
+          <p className="mt-1 flex items-center gap-1 text-sm font-medium text-red-600 dark:text-red-400">
+            <StatusNoIcon />
+            Cancelled
+          </p>
         )}
         {event.status === "completed" && (
-          <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">This event has ended.</p>
+          <p className="mt-1 flex items-center gap-1 text-sm text-gray-500 dark:text-gray-400">
+            <StatusOkIcon />
+            This event has ended.
+          </p>
         )}
         {event.description && <p className="mt-2 text-sm text-gray-600 dark:text-gray-300">{event.description}</p>}
 

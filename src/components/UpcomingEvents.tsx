@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { EVENT_CATEGORIES, EVENT_CATEGORY_LABELS } from "@/lib/constants";
 import { EVENT_CATEGORY_ACCENT } from "@/lib/categoryColors";
+import { EVENT_CATEGORY_ICON } from "@/components/icons";
 
 const PREVIEW_COUNT = 3;
 
@@ -57,7 +58,9 @@ export default function UpcomingEvents() {
         </p>
       ) : (
         <ul className="mt-3 space-y-2">
-          {events.map((event) => (
+          {events.map((event) => {
+            const CategoryIcon = EVENT_CATEGORY_ICON[event.category];
+            return (
             <li key={event._id}>
               <Link
                 href={`/events/${event._id}`}
@@ -65,7 +68,8 @@ export default function UpcomingEvents() {
               >
                 <span className="flex flex-wrap items-center justify-between gap-2">
                   <span className="font-medium">{event.title}</span>
-                  <span className={`rounded-full px-2 py-0.5 text-xs font-medium uppercase ${EVENT_CATEGORY_ACCENT[event.category].badge}`}>
+                  <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium uppercase ${EVENT_CATEGORY_ACCENT[event.category].badge}`}>
+                    <CategoryIcon className={EVENT_CATEGORY_ACCENT[event.category].icon} />
                     {EVENT_CATEGORY_LABELS[event.category]}
                   </span>
                 </span>
@@ -75,7 +79,8 @@ export default function UpcomingEvents() {
                 </span>
               </Link>
             </li>
-          ))}
+            );
+          })}
         </ul>
       )}
 
