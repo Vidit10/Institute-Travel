@@ -19,16 +19,15 @@ function HomeIcon() {
   );
 }
 
-function PinIcon() {
+function BookmarkIcon() {
   return (
     <svg width="20" height="20" viewBox="0 0 20 20" fill="none" aria-hidden>
       <path
-        d="M10 18s6-5.5 6-10a6 6 0 10-12 0c0 4.5 6 10 6 10z"
+        d="M5 3.5h10a.5.5 0 01.5.5v13l-5.5-3.5-5.5 3.5V4a.5.5 0 01.5-.5z"
         stroke="currentColor"
         strokeWidth="1.5"
         strokeLinejoin="round"
       />
-      <circle cx="10" cy="8" r="2" stroke="currentColor" strokeWidth="1.5" />
     </svg>
   );
 }
@@ -60,11 +59,14 @@ export default function BottomTabBar() {
           <HomeIcon />
           Home
         </Link>
-        <Link href="/arrivals" className={tabClass(pathname.startsWith("/arrivals"))}>
-          <PinIcon />
-          Arrivals
+        <Link
+          href="/recommendations"
+          className={`${tabClass(pathname.startsWith("/recommendations"))} break-words text-center leading-tight`}
+        >
+          <BookmarkIcon />
+          Recommendations
         </Link>
-        <Link href="/trips/new" className="flex flex-col items-center justify-center" aria-label="List a trip">
+        <Link href="/trips/new?listingType=local" className="flex flex-col items-center justify-center" aria-label="List a trip">
           <span className="-mt-6 flex h-12 w-12 items-center justify-center rounded-full bg-brand-600 text-white shadow-lg">
             <PlusIcon />
           </span>

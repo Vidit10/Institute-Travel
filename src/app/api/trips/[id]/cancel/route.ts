@@ -59,7 +59,7 @@ export async function POST(
     affectedRequests.map((r) =>
       notifyUser(r.riderId.toString(), {
         title: "Trip cancelled",
-        body: "A trip you were part of was cancelled by the host.",
+        body: "Sorry for the inconvenience — the host cancelled this trip. Look for another one.",
         url: "/trips/requested",
       })
     )

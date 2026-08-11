@@ -85,13 +85,24 @@ swap in a real logo later if you want.
 4. Set `NEXTAUTH_URL` to your real Vercel URL (e.g. `https://coride.vercel.app`).
 5. Deploy. Then go back to the Google Cloud Console and add the real callback URL (step 2
    above) — Google login will fail with a redirect_uri_mismatch error until you do this.
-6. If using the request-expiry cron (`vercel.json`), also set `CRON_SECRET` to a random
-   string in Vercel env vars — Vercel automatically sends it as a bearer token when
-   triggering the cron. Note: Vercel's Hobby (free) plan may restrict cron jobs to once/day
-   rather than hourly — if so, requests will still show their real expiry time in the UI
-   correctly, they just won't flip to "expired" status in the database until the next daily
-   sweep. Upgrading to hourly sweeps (or checking `expiresAt` lazily at read-time) is listed
-   as a good-first-issue in CONTRIBUTING.md.
+6. Set `CRON_SECRET` to a random string in Vercel env vars — Vercel automatically sends it as
+   a bearer token when triggering `vercel.json`'s cron (a once-daily safety-net sweep; see
+   below for the real-time one).
+7. **Request-expiry sweep, real-time**: Vercel's Hobby (free) plan only allows cron schedules
+   that run once a day, but riders should find out a request expired within minutes, not up
+   to a day later. This repo includes a GitHub Actions workflow
+   (`.github/workflows/expire-requests-cron.yml`) that calls the same endpoint every 15
+   minutes instead — free, and it works regardless of which platform you deploy to. Set it up
+   once per repo:
+   1. In GitHub: **Settings → Secrets and variables → Actions**, add two repository secrets:
+      - `CRON_SECRET` — the same value you set in Vercel's env vars above.
+      - `APP_URL` — your deployed URL with no trailing slash (e.g. `https://coride.vercel.app`).
+   2. That's it — the workflow starts running on its own schedule. You can trigger it once
+      manually from the **Actions** tab (`Expire stale requests` → **Run workflow**) to
+      confirm it's wired up correctly before waiting for the next scheduled run.
+   3. GitHub auto-disables a repo's scheduled workflows after 60 days with no commits/pushes
+      to the repo — if that happens, just re-enable it from the **Actions** tab (or push any
+      commit, which resets the clock).
 
 Once deployed, sign in with an `@iitdh.ac.in` account and you're live.
 
@@ -106,7 +117,8 @@ Netlify via `netlify.toml` (uses `@netlify/plugin-nextjs`, already in `package.j
    `https://<netlify-domain>/api/auth/callback/google` as an **additional** authorized
    redirect URI in Google Cloud Console (you can have both Vercel's and Netlify's URLs
    registered at once — Google allows multiple).
-4. **Known gap:** the request-expiry cron (`vercel.json`) is Vercel-specific and won't run
-   on Netlify. If Netlify becomes the primary deployment, that sweep needs to be
-   reimplemented as a [Netlify Scheduled Function](https://docs.netlify.com/functions/scheduled-functions/)
-   — not done yet, tracked as a good-first-issue.
+4. `vercel.json`'s once-daily cron is Vercel-specific and won't run on Netlify, but that's no
+   longer the sweep doing the real work — the GitHub Actions workflow from step 8.7 above
+   calls `/api/cron/expire-requests` directly over HTTP, so it works identically regardless
+   of which platform (or platforms) you deploy to. Just point `APP_URL` at whichever
+   deployment should receive the real-time sweep.

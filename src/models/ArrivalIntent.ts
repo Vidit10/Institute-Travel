@@ -1,5 +1,5 @@
 import { Schema, model, models, type InferSchemaType } from "mongoose";
-import { PICKUP_LOCATIONS, TRIP_MODES } from "@/lib/constants";
+import { TRIP_MODES, DIRECTIONS, LISTING_TYPES } from "@/lib/constants";
 
 // A lightweight "I'm arriving around here, around then" signal — deliberately
 // has no vehicle/fare/capacity. It's a discovery board, not a booking: once a
@@ -9,9 +9,23 @@ import { PICKUP_LOCATIONS, TRIP_MODES } from "@/lib/constants";
 const arrivalIntentSchema = new Schema(
   {
     userId: { type: Schema.Types.ObjectId, ref: "User", required: true },
-    pickupLocation: { type: String, enum: PICKUP_LOCATIONS, required: true },
+    // The anchor point — a city location when direction is "to-campus" (today's
+    // meaning, unchanged), or the on-campus meeting point when "from-campus". No
+    // longer a fixed enum; valid values depend on direction/listingType, validated
+    // in the API layer. Loosening (not renaming) keeps every pre-existing document
+    // valid untouched.
+    pickupLocation: { type: String, required: true },
+    // Old documents default to "to-campus" on read — their only prior meaning.
+    direction: { type: String, enum: DIRECTIONS, default: "to-campus" },
+    listingType: { type: String, enum: LISTING_TYPES, default: "long-distance" },
     arrivalTime: { type: Date, required: true },
     mode: { type: String, enum: TRIP_MODES, required: false },
+    // Optional, same purpose as Trip.trainNumber/flightNumber — lets someone
+    // browsing the board double-check they've got the right person/train.
+    // Both optional so existing entries (posted before this field existed)
+    // are unaffected.
+    trainNumber: { type: String, required: false },
+    flightNumber: { type: String, required: false },
     // How many people are already in the poster's own group (so a cluster
     // count reflects real head-count, not just number of board entries).
     partySize: { type: Number, required: true, min: 1, default: 1 },

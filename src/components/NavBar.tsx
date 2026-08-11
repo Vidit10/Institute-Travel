@@ -7,6 +7,7 @@ import { useTheme } from "next-themes";
 import NotificationBell from "./NotificationBell";
 import AccountMenu from "./AccountMenu";
 import BottomTabBar from "./BottomTabBar";
+import HelpButton from "./HelpButton";
 
 function ThemeToggle() {
   const { theme, setTheme } = useTheme();
@@ -64,19 +65,27 @@ export default function NavBar() {
           {/* Desktop: brand · one primary CTA · low-frequency icons · account */}
           <div className="hidden items-center gap-3 text-sm sm:flex">
             <Link
-              href="/trips/new"
+              href="/recommendations"
               className="rounded-md bg-brand-600 px-3 py-1.5 font-medium text-white hover:bg-brand-700"
             >
-              List a trip
+              Recommendations
+            </Link>
+            <Link
+              href="/events"
+              className="rounded-md border border-brand-600 px-3 py-1.5 font-medium text-brand-600 hover:bg-brand-50 dark:text-brand-500 dark:hover:bg-brand-950"
+            >
+              Events
             </Link>
             {session?.user && <NotificationBell />}
+            {session?.user && <HelpButton />}
             <ThemeToggle />
             {session?.user && <AccountMenu variant="desktop" />}
           </div>
 
-          {/* Mobile: slim header — bell + theme only, everything else lives in the bottom tab bar */}
+          {/* Mobile: slim header — bell + help + theme only, everything else lives in the bottom tab bar */}
           <div className="flex items-center gap-2 sm:hidden">
             {session?.user && <NotificationBell />}
+            {session?.user && <HelpButton />}
             <ThemeToggle />
           </div>
         </div>

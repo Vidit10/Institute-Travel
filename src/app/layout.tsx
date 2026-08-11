@@ -10,6 +10,14 @@ export const metadata: Metadata = {
   title: "CoRide — IIT Dharwad",
   description: "Ride-sharing for the IIT Dharwad student community.",
   manifest: "/manifest.json",
+  // iOS-specific "Add to Home Screen" polish — Safari doesn't fully honor the
+  // web manifest's display/theme-color for standalone-mode chrome the way
+  // Chrome/Android does, so these are still needed alongside it.
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "default",
+    title: "CoRide",
+  },
 };
 
 export const viewport: Viewport = {
@@ -17,6 +25,11 @@ export const viewport: Viewport = {
     { media: "(prefers-color-scheme: dark)", color: "#030712" },
     { media: "(prefers-color-scheme: light)", color: "#2563eb" },
   ],
+  // Without this, `env(safe-area-inset-bottom)` (used by BottomTabBar to
+  // clear the home-indicator gesture bar on notched iPhones) resolves to 0 —
+  // Safari only fills in real safe-area values when the viewport opts into
+  // viewport-fit=cover.
+  viewportFit: "cover",
 };
 
 export default function RootLayout({
@@ -50,7 +63,7 @@ export default function RootLayout({
                     </Link>
                   </div>
                 </div>
-                <p className="mt-1">Be someone you&apos;d want to share a cab with.</p>
+                {/* <p className="mt-1">Be someone you&apos;d want to share a cab with.</p> */}
                 <p className="mt-2 text-[11px] text-gray-400 dark:text-gray-600">
                   Experience curated by{" "}
                   <a href="mailto:mc23bt010@iitdh.ac.in" className="hover:underline">

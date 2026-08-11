@@ -3,6 +3,7 @@ import { dbConnect } from "@/lib/mongodb";
 import { JoinRequest } from "@/models/JoinRequest";
 import { Trip } from "@/models/Trip";
 import { ArrivalIntent } from "@/models/ArrivalIntent";
+import { Event } from "@/models/Event";
 import { notifyUser } from "@/lib/notify";
 import { ARRIVAL_INTENT_GRACE_MINUTES } from "@/lib/constants";
 
@@ -45,11 +46,48 @@ export async function GET(req: NextRequest) {
   }
 
   // Mark trips whose departure time has passed as completed, so they stop
-  // showing up as joinable/actionable anywhere in the app.
-  const completedResult = await Trip.updateMany(
-    { status: { $in: ["open", "full"] }, departureTime: { $lt: new Date() } },
-    { status: "completed" }
-  );
+  // showing up as joinable/actionable anywhere in the app. Found first (not
+  // just updateMany'd) so we know exactly which trips newly completed, to
+  // nudge their participants toward a post-trip review exactly once.
+  const newlyCompleted = await Trip.find({
+    status: { $in: ["open", "full"] },
+    departureTime: { $lt: new Date() },
+  });
+
+  if (newlyCompleted.length > 0) {
+    await Trip.updateMany(
+      { _id: { $in: newlyCompleted.map((t) => t._id) } },
+      { status: "completed" }
+    );
+
+    const acceptedRequests = await JoinRequest.find({
+      tripId: { $in: newlyCompleted.map((t) => t._id) },
+      status: "accepted",
+    });
+    const ridersByTrip = new Map<string, string[]>();
+    for (const r of acceptedRequests) {
+      const key = r.tripId.toString();
+      const riders = ridersByTrip.get(key) || [];
+      riders.push(r.riderId.toString());
+      ridersByTrip.set(key, riders);
+    }
+
+    await Promise.all(
+      newlyCompleted.flatMap((trip) => {
+        const tripId = trip._id.toString();
+        const participantIds = [trip.hostId.toString(), ...(ridersByTrip.get(tripId) || [])];
+        return participantIds.map((userId) =>
+          notifyUser(userId, {
+            title: "Thanks for riding with CoRide 🙌",
+            body: "Got 2 minutes? We'd love to hear how your trip went.",
+            url: `/trips/${tripId}/review`,
+          })
+        );
+      })
+    );
+  }
+
+  const completedResult = { modifiedCount: newlyCompleted.length };
 
   // Arrival-board entries past their own arrival time (plus a grace window)
   // stop being useful signal — sweep them the same way as trips.
@@ -59,9 +97,18 @@ export async function GET(req: NextRequest) {
     { status: "expired" }
   );
 
+  // Same "find candidates before updating" pattern as trips above — events
+  // whose start time has passed stop showing as RSVP-able anywhere. No
+  // post-event review nudge is sent (Trip has that; Events doesn't).
+  const eventsToComplete = await Event.updateMany(
+    { status: { $in: ["open", "full"] }, startTime: { $lt: new Date() } },
+    { status: "completed" }
+  );
+
   return NextResponse.json({
     expired: toExpire.length,
     completed: completedResult.modifiedCount,
     expiredArrivals: expiredArrivals.modifiedCount,
+    completedEvents: eventsToComplete.modifiedCount,
   });
 }

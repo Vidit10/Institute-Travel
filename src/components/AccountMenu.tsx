@@ -37,8 +37,17 @@ function AccountPanelItems({ onNavigate }: { onNavigate: () => void }) {
       <Link href="/trips/mine" className={ITEM_CLASS} onClick={onNavigate}>
         My Rides
       </Link>
+      <Link href="/recommendations" className={ITEM_CLASS} onClick={onNavigate}>
+        Recommendations
+      </Link>
+      <Link href="/events" className={ITEM_CLASS} onClick={onNavigate}>
+        Events
+      </Link>
       <Link href="/settings" className={ITEM_CLASS} onClick={onNavigate}>
         Settings
+      </Link>
+      <Link href="/feedback" className={ITEM_CLASS} onClick={onNavigate}>
+        Feedback
       </Link>
       {session?.user && (
         <button

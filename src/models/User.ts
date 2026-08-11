@@ -25,6 +25,13 @@ const userSchema = new Schema(
     // as girls-only by default so they don't have to re-toggle it every time
     // (still overridable per-post on the arrivals form itself).
     arrivalsGirlsOnlyDefault: { type: Boolean, default: false },
+
+    // Whether the "ask your friends to join" nudge has been shown — a
+    // server-side flag (not localStorage) so it's genuinely once-ever per
+    // person, not once-per-browser. Read via .lean() elsewhere in the app,
+    // so treat undefined the same as false (the schema default only applies
+    // on full hydration, not .lean() reads of pre-existing documents).
+    inviteFriendsPromptShown: { type: Boolean, default: false },
   },
   { timestamps: true }
 );

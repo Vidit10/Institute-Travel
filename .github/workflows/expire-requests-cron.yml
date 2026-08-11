@@ -1,0 +1,24 @@
+name: Expire stale requests
+
+# Vercel's Hobby (free) plan only allows daily Vercel Cron schedules, but
+# src/app/api/cron/expire-requests/route.ts needs to run often to stay
+# "load-bearing, not optional polish" (docs/SPEC.md section 5) — riders should
+# find out their request expired within ~15 minutes of the deadline, not up to
+# a day later. This workflow calls the same endpoint on a real cadence instead.
+# vercel.json still runs it once daily too, as a safety net in case this
+# workflow ever stops firing (e.g. GitHub disables schedules after 60 days of
+# repo inactivity — just re-run it manually or push a commit to reset that).
+on:
+  schedule:
+    - cron: "*/15 * * * *"
+  workflow_dispatch: {}
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Call the expiry endpoint
+        run: |
+          curl --fail --silent --show-error \
+            -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}" \
+            "${{ secrets.APP_URL }}/api/cron/expire-requests"

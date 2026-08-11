@@ -49,6 +49,27 @@ describe("resolveCompanions", () => {
     expect(invites).toHaveLength(0);
   });
 
+  it("creates a pending invite (not an auto-accept) for an account that hasn't finished onboarding", async () => {
+    const host = await makeUser("host3@iitdh.ac.in");
+    // Mirrors what the Google sign-in callback creates on first login — no
+    // onboarding fields set yet.
+    const halfSignedUp = await User.create({
+      email: "notonboarded@iitdh.ac.in",
+      name: "notonboarded@iitdh.ac.in",
+      googleId: "notonboarded@iitdh.ac.in",
+      onboarded: false,
+    });
+    const trip = await makeTrip(host._id.toString(), 2, 4);
+
+    await resolveCompanions(trip, host._id.toString(), ["notonboarded@iitdh.ac.in"]);
+
+    const joinRequest = await JoinRequest.findOne({ tripId: trip._id, riderId: halfSignedUp._id });
+    expect(joinRequest).toBeNull();
+
+    const invite = await CompanionInvite.findOne({ tripId: trip._id, email: "notonboarded@iitdh.ac.in" });
+    expect(invite?.status).toBe("pending");
+  });
+
   it("creates a pending invite for an email with no account yet", async () => {
     const host = await makeUser("host2@iitdh.ac.in");
     const trip = await makeTrip(host._id.toString(), 2, 4);

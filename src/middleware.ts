@@ -40,15 +40,15 @@ export default withAuth(
   }
 );
 
+// Deny-by-default: every page is gated unless explicitly excluded here, rather
+// than an allow-list of gated routes that silently misses any new page someone
+// forgets to add (that's exactly how /recommendations ended up reachable
+// without logging in). Excluded: the login page itself, all of /api/* (every
+// API route already enforces its own session/CRON_SECRET check — see e.g.
+// src/app/api/cron/expire-requests/route.ts, which must stay reachable by an
+// external scheduler with no user session at all), and static assets.
 export const config = {
   matcher: [
-    "/",
-    "/onboarding",
-    "/trips/:path*",
-    "/settings",
-    "/feedback",
-    "/invite/:path*",
-    "/arrivals",
-    "/admin/:path*",
+    "/((?!api|login|_next/static|_next/image|favicon.ico|icon.svg|manifest.json|sw.js).*)",
   ],
 };

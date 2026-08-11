@@ -44,7 +44,7 @@ export default function RequestedTripsPage() {
     <>
       <NavBar />
       <main className="mx-auto max-w-2xl px-4 py-6 pb-20 sm:pb-6">
-        <h1 className="text-lg font-semibold">My Rides</h1>
+        <h1 className="text-xl font-bold">My Rides</h1>
         <RidesTabs />
 
         {loading && <LoadingScreen />}

@@ -20,5 +20,9 @@ Thumbs.db
 .claude/
 strip_claude.*
 
+# Local-only AI agent continuity notes — see memory/README.md. Never committed;
+# regenerate/update per-machine, not shared via PRs.
+memory/
+
 # Personal blog-drafting notes — not part of the public project
 docs/PRODUCT_LOG.md

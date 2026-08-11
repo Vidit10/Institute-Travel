@@ -4,7 +4,6 @@ import { authOptions } from "@/lib/auth";
 import { dbConnect } from "@/lib/mongodb";
 import { Trip } from "@/models/Trip";
 import { JoinRequest } from "@/models/JoinRequest";
-import { User } from "@/models/User";
 import { CompanionInvite } from "@/models/CompanionInvite";
 import { sweepExpired } from "@/lib/expireRequests";
 
@@ -41,7 +40,7 @@ export async function GET(
     tripId: trip._id,
     riderId: session.user.id,
   }).lean();
-  const myRequest = myRequestDoc as unknown as { status: string } | null;
+  const myRequest = myRequestDoc as unknown as { status: string; expiresAt: string } | null;
 
   const requestsDocs = isHost
     ? await JoinRequest.find({ tripId: trip._id })
@@ -52,6 +51,7 @@ export async function GET(
     _id: string;
     status: string;
     createdAt: string;
+    expiresAt: string;
     riderId: { _id: string; name: string; year: string; program: string; phone: string; contactShareDefaultConsent: boolean };
   }>;
 
@@ -93,6 +93,7 @@ export async function GET(
         _id: r._id,
         status: r.status,
         createdAt: r.createdAt,
+        expiresAt: r.expiresAt,
         rider: {
           name: rider.name,
           year: rider.year,

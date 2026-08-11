@@ -9,6 +9,7 @@ import { JoinRequest } from "@/models/JoinRequest";
 import { ArrivalIntent } from "@/models/ArrivalIntent";
 import { Feedback } from "@/models/Feedback";
 import { AbuseLog } from "@/models/AbuseLog";
+import { TripReview } from "@/models/TripReview";
 import { estimateTotalMoneySaved, type TripForSavings } from "@/lib/adminMetrics";
 
 const DAY_MS = 24 * 60 * 60 * 1000;
@@ -51,6 +52,7 @@ export async function GET() {
     abuseLast7d,
     tripsForSavings,
     tripTrendRaw,
+    tripReviews,
   ] = await Promise.all([
     User.countDocuments(),
     User.countDocuments({ onboarded: true }),
@@ -83,6 +85,7 @@ export async function GET() {
         },
       },
     ]),
+    TripReview.find().lean(),
   ]);
 
   const requestCounts: Record<string, number> = {};
@@ -112,6 +115,25 @@ export async function GET() {
 
   const moneySaved = estimateTotalMoneySaved(tripsForSavings as unknown as TripForSavings[]);
 
+  // Real, self-reported numbers from the post-trip review — a small-sample
+  // complement to the modeled `moneySaved` estimate above, not a replacement
+  // (too few responses early on to be statistically meaningful on their own).
+  const reviews = tripReviews as unknown as Array<{
+    happened: boolean;
+    amountSaved?: number;
+    wouldUseAgain: string;
+  }>;
+  const happenedCount = reviews.filter((r) => r.happened).length;
+  const savedAmounts = reviews.filter((r) => r.happened && typeof r.amountSaved === "number");
+  const avgReportedSavings =
+    savedAmounts.length > 0
+      ? savedAmounts.reduce((sum, r) => sum + (r.amountSaved || 0), 0) / savedAmounts.length
+      : null;
+  const wouldUseAgainCounts: Record<string, number> = {};
+  for (const r of reviews) {
+    wouldUseAgainCounts[r.wouldUseAgain] = (wouldUseAgainCounts[r.wouldUseAgain] || 0) + 1;
+  }
+
   return NextResponse.json({
     users: {
       total: totalUsers,
@@ -136,6 +158,12 @@ export async function GET() {
     },
     programCounts,
     moneySaved,
+    tripReviews: {
+      total: reviews.length,
+      happenedRate: reviews.length > 0 ? happenedCount / reviews.length : null,
+      avgReportedSavings,
+      wouldUseAgainCounts,
+    },
     feedback: {
       byCategory: feedbackByCategory,
       total: feedbackDocs.length,
