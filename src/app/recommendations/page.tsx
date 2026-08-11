@@ -6,6 +6,7 @@ import NavBar from "@/components/NavBar";
 import LoadingScreen from "@/components/LoadingScreen";
 import EmptyState from "@/components/EmptyState";
 import ShareCTA from "@/components/ShareCTA";
+import { WarningTriangleIcon } from "@/components/icons";
 import RecommendationFields, {
   type RecommendationDraft,
   emptyDraft,
@@ -18,7 +19,7 @@ import {
   FOOD_TYPE_LABELS,
   LEISURE_TYPES,
 } from "@/lib/constants";
-import { RECOMMENDATION_CATEGORY_ACCENT } from "@/lib/categoryColors";
+import { RECOMMENDATION_CATEGORY_ACCENT, FOOD_TYPE_ACCENT } from "@/lib/categoryColors";
 import { RECOMMENDATION_CATEGORY_ICON } from "@/components/icons";
 
 type Recommendation = {
@@ -47,9 +48,9 @@ const CATEGORY_ORDER: (typeof RECOMMENDATION_CATEGORIES)[number][] = [
   "other",
 ];
 
-function Badge({ children }: { children: React.ReactNode }) {
+function Badge({ children, colorClassName }: { children: React.ReactNode; colorClassName?: string }) {
   return (
-    <span className="rounded-full bg-gray-100 px-2 py-0.5 text-xs text-gray-600 dark:bg-gray-800 dark:text-gray-300">
+    <span className={`rounded-full px-2 py-0.5 text-xs ${colorClassName || "bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-300"}`}>
       {children}
     </span>
   );
@@ -146,7 +147,7 @@ function RecommendationCard({
             <span className="font-medium">{rec.title}</span>
             <span className="flex flex-wrap items-center gap-1">
               {rec.area && <Badge>{rec.area}</Badge>}
-              {rec.foodType && <Badge>{FOOD_TYPE_LABELS[rec.foodType]}</Badge>}
+              {rec.foodType && <Badge colorClassName={FOOD_TYPE_ACCENT[rec.foodType].badge}>{FOOD_TYPE_LABELS[rec.foodType]}</Badge>}
               {rec.leisureType && <Badge>{rec.leisureType}</Badge>}
               {rec.suggestedDays && (
                 <Badge>
@@ -190,8 +191,9 @@ function RecommendationCard({
                 href={`/feedback?category=report&context=${encodeURIComponent(
                   `Recommendation "${rec.title}" (id: ${rec._id})`
                 )}`}
-                className="hover:underline"
+                className="inline-flex items-center gap-1 hover:underline"
               >
+                <WarningTriangleIcon />
                 Report
               </Link>
             </span>

@@ -1,4 +1,4 @@
-import type { RECOMMENDATION_CATEGORIES, EVENT_CATEGORIES } from "@/lib/constants";
+import type { RECOMMENDATION_CATEGORIES, EVENT_CATEGORIES, FOOD_TYPES } from "@/lib/constants";
 
 // Additive-only accent palette for category badges/icons — the app's
 // primary `brand` blue (buttons, links, active states) is untouched. Uses
@@ -47,4 +47,30 @@ export const EVENT_CATEGORY_ACCENT: Record<(typeof EVENT_CATEGORIES)[number], Ac
   social: EMERALD,
   academic: VIOLET,
   other: SLATE,
+};
+
+// Veg/non-veg/both: a subtle tint even unselected, full color when selected
+// — a place's food type is meaningful at a glance the way a generic category
+// label isn't (green/red/orange is a near-universal veg/non-veg convention).
+type FoodAccent = { selected: string; unselected: string; badge: string };
+
+export const FOOD_TYPE_ACCENT: Record<(typeof FOOD_TYPES)[number], FoodAccent> = {
+  veg: {
+    selected: "border-green-600 bg-green-600 text-white dark:border-green-500 dark:bg-green-600",
+    unselected:
+      "border-green-300 text-green-700 hover:bg-green-50 dark:border-green-800 dark:text-green-400 dark:hover:bg-green-950",
+    badge: "bg-green-100 text-green-700 dark:bg-green-950 dark:text-green-400",
+  },
+  "non-veg": {
+    selected: "border-red-600 bg-red-600 text-white dark:border-red-500 dark:bg-red-600",
+    unselected:
+      "border-red-300 text-red-700 hover:bg-red-50 dark:border-red-800 dark:text-red-400 dark:hover:bg-red-950",
+    badge: "bg-red-100 text-red-700 dark:bg-red-950 dark:text-red-400",
+  },
+  both: {
+    selected: "border-amber-600 bg-amber-500 text-white dark:border-amber-500 dark:bg-amber-600",
+    unselected:
+      "border-amber-300 text-amber-700 hover:bg-amber-50 dark:border-amber-800 dark:text-amber-400 dark:hover:bg-amber-950",
+    badge: "bg-amber-100 text-amber-700 dark:bg-amber-950 dark:text-amber-400",
+  },
 };

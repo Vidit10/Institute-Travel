@@ -6,6 +6,7 @@ import { dbConnect } from "@/lib/mongodb";
 import { Recommendation } from "@/models/Recommendation";
 import { notifyUser } from "@/lib/notify";
 import { recommendationFieldsSchema } from "@/lib/recommendationValidation";
+import { castVote } from "@/lib/recommendationVoting";
 
 // PATCH: admin edits the submitted fields (same validation as the public
 // create form — src/app/api/recommendations/route.ts's recommendationFieldsSchema)
@@ -49,6 +50,16 @@ export async function PATCH(
 
   if (!recommendation) {
     return NextResponse.json({ error: "not found" }, { status: 404 });
+  }
+
+  // Reddit-style: the poster's own post starts at their own upvote. Safe to
+  // call unconditionally — the public vote endpoint 404s on non-approved
+  // recommendations, so a submitter can never have voted before this exact
+  // moment; this is always a fresh vote, never a toggle-off.
+  try {
+    await castVote(recommendation._id.toString(), recommendation.userId.toString(), 1);
+  } catch {
+    // Best-effort — a vote failure must never undo the approval that already happened.
   }
 
   try {

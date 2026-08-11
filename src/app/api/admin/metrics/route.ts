@@ -10,6 +10,11 @@ import { ArrivalIntent } from "@/models/ArrivalIntent";
 import { Feedback } from "@/models/Feedback";
 import { AbuseLog } from "@/models/AbuseLog";
 import { TripReview } from "@/models/TripReview";
+import { Recommendation } from "@/models/Recommendation";
+import { RecommendationVote } from "@/models/RecommendationVote";
+import { RecommendationEditSuggestion } from "@/models/RecommendationEditSuggestion";
+import { Event } from "@/models/Event";
+import { EventRSVP } from "@/models/EventRSVP";
 import { estimateTotalMoneySaved, type TripForSavings } from "@/lib/adminMetrics";
 
 const DAY_MS = 24 * 60 * 60 * 1000;
@@ -53,6 +58,15 @@ export async function GET() {
     tripsForSavings,
     tripTrendRaw,
     tripReviews,
+    recommendationsTotal,
+    recommendationsPending,
+    recommendationsByCategory,
+    recommendationVotesTotal,
+    editSuggestionsPending,
+    eventsTotal,
+    eventsByCategory,
+    eventsByStatus,
+    eventRsvpTotals,
   ] = await Promise.all([
     User.countDocuments(),
     User.countDocuments({ onboarded: true }),
@@ -86,7 +100,26 @@ export async function GET() {
       },
     ]),
     TripReview.find().lean(),
+    Recommendation.countDocuments(),
+    Recommendation.countDocuments({ status: "pending" }),
+    // Category breakdown of what's actually live on the board — pending
+    // submissions aren't shown publicly yet, so counting them here would
+    // misrepresent what students actually see.
+    Recommendation.aggregate([
+      { $match: { status: "approved" } },
+      { $group: { _id: "$category", count: { $sum: 1 } } },
+    ]),
+    RecommendationVote.countDocuments(),
+    RecommendationEditSuggestion.countDocuments({ status: "pending" }),
+    Event.countDocuments(),
+    Event.aggregate([{ $group: { _id: "$category", count: { $sum: 1 } } }]),
+    Event.aggregate([{ $group: { _id: "$status", count: { $sum: 1 } } }]),
+    // Sum of partySize, not doc count — an RSVP can be for more than one
+    // person (same "party size" concept as Trip.numTravelers).
+    EventRSVP.aggregate([{ $group: { _id: null, people: { $sum: "$partySize" } } }]),
   ]);
+
+  const eventRsvpPeopleTotal = (eventRsvpTotals as Array<{ people: number }>)[0]?.people || 0;
 
   const requestCounts: Record<string, number> = {};
   for (const r of requestsByStatus as Array<{ _id: string; count: number }>) {
@@ -172,6 +205,19 @@ export async function GET() {
       recent: abuseRecent,
       total: abuseTotal,
       last7d: abuseLast7d,
+    },
+    recommendations: {
+      total: recommendationsTotal,
+      pending: recommendationsPending,
+      byCategory: recommendationsByCategory,
+      votesTotal: recommendationVotesTotal,
+      editSuggestionsPending,
+    },
+    events: {
+      total: eventsTotal,
+      byCategory: eventsByCategory,
+      byStatus: eventsByStatus,
+      rsvpPeopleTotal: eventRsvpPeopleTotal,
     },
   });
 }

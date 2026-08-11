@@ -317,8 +317,10 @@ export const ACTIVE_EVENT_STATUSES = ["open", "full"] as const;
 export const MAX_EVENT_TITLE_LENGTH = 100;
 export const MAX_EVENT_DESCRIPTION_LENGTH = 500;
 // Longer than Trip's MAX_ADVANCE_DAYS (30) — an event like a fest may
-// reasonably be planned further out than a ride ever is.
-export const MAX_EVENT_ADVANCE_DAYS = 60;
+// reasonably be planned further out than a ride ever is. 6 months covers a
+// full semester's worth of planning (e.g. a fest announced at the start of
+// term for a date near the end of it).
+export const MAX_EVENT_ADVANCE_DAYS = 180;
 // Same reasoning as MAX_ACTIVE_TRIPS_PER_HOST — keeps a host from
 // accumulating an unbounded number of simultaneous listings.
 export const MAX_ACTIVE_EVENTS_PER_HOST = 5;

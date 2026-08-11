@@ -35,6 +35,19 @@ type Metrics = {
     total: number;
     last7d: number;
   };
+  recommendations: {
+    total: number;
+    pending: number;
+    byCategory: Array<{ _id: string; count: number }>;
+    votesTotal: number;
+    editSuggestionsPending: number;
+  };
+  events: {
+    total: number;
+    byCategory: Array<{ _id: string; count: number }>;
+    byStatus: Array<{ _id: string; count: number }>;
+    rsvpPeopleTotal: number;
+  };
 };
 
 const CATEGORY_LABELS: Record<string, string> = {
@@ -214,6 +227,16 @@ export default function AdminPage() {
                 value={`${metrics.trips.girlsOnly} trips`}
                 hint={`${metrics.arrivals.girlsOnly} arrival posts`}
               />
+              <StatTile
+                label="Recommendations"
+                value={String(metrics.recommendations.total)}
+                hint={metrics.recommendations.pending > 0 ? `${metrics.recommendations.pending} pending review` : "none pending"}
+              />
+              <StatTile
+                label="Events created"
+                value={String(metrics.events.total)}
+                hint={`${metrics.events.rsvpPeopleTotal} RSVP'd (people, not just posts)`}
+              />
             </div>
 
             <Section title="Trips created — last 30 days">
@@ -258,6 +281,80 @@ export default function AdminPage() {
                     />
                   ))}
                 </div>
+              </Section>
+
+              <Section title={`Recommendations (${metrics.recommendations.total})`}>
+                <p className="text-xs text-gray-500 dark:text-gray-400">
+                  Category breakdown of what&apos;s live on the board — pending submissions
+                  aren&apos;t counted here since students don&apos;t see them yet.
+                </p>
+                <div className="mt-3 space-y-2">
+                  {metrics.recommendations.byCategory.length === 0 ? (
+                    <p className="text-sm text-gray-500 dark:text-gray-400">Nothing approved yet.</p>
+                  ) : (
+                    metrics.recommendations.byCategory.map((c) => (
+                      <BarRow
+                        key={c._id}
+                        label={c._id}
+                        count={c.count}
+                        max={Math.max(...metrics.recommendations.byCategory.map((x) => x.count), 1)}
+                      />
+                    ))
+                  )}
+                </div>
+                <div className="mt-3 flex flex-wrap gap-6 text-sm">
+                  <div>
+                    <p className="text-xl font-semibold">{metrics.recommendations.votesTotal}</p>
+                    <p className="text-gray-500 dark:text-gray-400">Votes cast</p>
+                  </div>
+                  <div>
+                    <p className="text-xl font-semibold">{metrics.recommendations.editSuggestionsPending}</p>
+                    <p className="text-gray-500 dark:text-gray-400">Suggested edits pending</p>
+                  </div>
+                </div>
+              </Section>
+
+              <Section title={`Events (${metrics.events.total})`}>
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <div>
+                    <h3 className="text-xs font-semibold uppercase text-gray-500 dark:text-gray-400">By category</h3>
+                    <div className="mt-2 space-y-2">
+                      {metrics.events.byCategory.length === 0 ? (
+                        <p className="text-sm text-gray-500 dark:text-gray-400">No events yet.</p>
+                      ) : (
+                        metrics.events.byCategory.map((c) => (
+                          <BarRow
+                            key={c._id}
+                            label={c._id}
+                            count={c.count}
+                            max={Math.max(...metrics.events.byCategory.map((x) => x.count), 1)}
+                          />
+                        ))
+                      )}
+                    </div>
+                  </div>
+                  <div>
+                    <h3 className="text-xs font-semibold uppercase text-gray-500 dark:text-gray-400">By status</h3>
+                    <div className="mt-2 space-y-2">
+                      {metrics.events.byStatus.length === 0 ? (
+                        <p className="text-sm text-gray-500 dark:text-gray-400">No events yet.</p>
+                      ) : (
+                        metrics.events.byStatus.map((s) => (
+                          <BarRow
+                            key={s._id}
+                            label={s._id}
+                            count={s.count}
+                            max={Math.max(...metrics.events.byStatus.map((x) => x.count), 1)}
+                          />
+                        ))
+                      )}
+                    </div>
+                  </div>
+                </div>
+                <p className="mt-3 text-xs text-gray-500 dark:text-gray-400">
+                  {metrics.events.rsvpPeopleTotal} total people RSVP&apos;d across all events (sum of
+                  party sizes, not just RSVP count).
+                </p>
               </Section>
 
               <Section title="Rate-limit lockouts">

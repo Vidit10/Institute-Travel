@@ -1,56 +1,13 @@
 "use client";
 
-import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useSession } from "next-auth/react";
-import { useTheme } from "next-themes";
 import NotificationBell from "./NotificationBell";
 import AccountMenu from "./AccountMenu";
 import BottomTabBar from "./BottomTabBar";
 import HelpButton from "./HelpButton";
+import { ThemeToggle } from "./ThemeToggle";
 import { BookmarkMenuIcon, CalendarMenuIcon } from "./icons";
-
-function ThemeToggle() {
-  const { theme, setTheme } = useTheme();
-  // next-themes standard pattern: theme is unknown until mounted, so render a
-  // fixed-size placeholder first to avoid a hydration mismatch.
-  const [mounted, setMounted] = useState(false);
-  useEffect(() => setMounted(true), []);
-
-  if (!mounted) return <span className="inline-block h-6 w-6" aria-hidden />;
-
-  return (
-    <button
-      onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
-      aria-label={theme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
-      title={theme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
-      className="inline-flex h-6 w-6 items-center justify-center leading-none"
-    >
-      {theme === "dark" ? (
-        // Sun icon
-        <svg width="20" height="20" viewBox="0 0 20 20" fill="none" aria-hidden>
-          <circle cx="10" cy="10" r="3.5" stroke="currentColor" strokeWidth="1.5" />
-          <path
-            d="M10 1.5v2M10 16.5v2M18.5 10h-2M3.5 10h-2M15.6 4.4l-1.4 1.4M5.8 14.2l-1.4 1.4M15.6 15.6l-1.4-1.4M5.8 5.8L4.4 4.4"
-            stroke="currentColor"
-            strokeWidth="1.5"
-            strokeLinecap="round"
-          />
-        </svg>
-      ) : (
-        // Moon icon
-        <svg width="20" height="20" viewBox="0 0 20 20" fill="none" aria-hidden>
-          <path
-            d="M17 11.3A7 7 0 018.7 3 7 7 0 1017 11.3z"
-            stroke="currentColor"
-            strokeWidth="1.5"
-            strokeLinejoin="round"
-          />
-        </svg>
-      )}
-    </button>
-  );
-}
 
 export default function NavBar() {
   const { data: session } = useSession();
@@ -63,7 +20,11 @@ export default function NavBar() {
             CoRide
           </Link>
 
-          {/* Desktop: brand · one primary CTA · low-frequency icons · account */}
+          {/* Desktop: brand · content buttons · divider · utility icons+account.
+              ThemeToggle deliberately isn't here — it moved into AccountMenu
+              (a one-time-ish preference, not glanceable state like
+              notifications) specifically to keep this row from growing
+              wider as Help/etc. pick up text labels. */}
           <div className="hidden items-center gap-3 text-sm sm:flex">
             <Link
               href="/recommendations"
@@ -79,9 +40,11 @@ export default function NavBar() {
               <CalendarMenuIcon />
               Events
             </Link>
+            {session?.user && (
+              <span className="h-5 w-px bg-gray-200 dark:bg-gray-800" aria-hidden />
+            )}
             {session?.user && <NotificationBell />}
             {session?.user && <HelpButton />}
-            <ThemeToggle />
             {session?.user && <AccountMenu variant="desktop" />}
           </div>
 

@@ -5,6 +5,7 @@ import Link from "next/link";
 import LoadingScreen from "@/components/LoadingScreen";
 import ArrivalForm, { type ArrivalEntry } from "@/components/ArrivalForm";
 import { YEAR_LABELS, PROGRAM_LABELS, DIRECTIONS, DIRECTION_LABELS } from "@/lib/constants";
+import { WarningTriangleIcon } from "@/components/icons";
 
 const OVERVIEW_POLL_MS = 30_000;
 
@@ -57,8 +58,9 @@ function EntryCard({ entry, showLocation }: { entry: Entry; showLocation?: boole
         href={`/feedback?category=report&context=${encodeURIComponent(
           `Arrival board entry by ${entry.userId.name} (id: ${entry._id})`
         )}`}
-        className="text-xs text-gray-400 hover:underline dark:text-gray-500"
+        className="inline-flex items-center gap-1 text-xs text-gray-400 hover:underline dark:text-gray-500"
       >
+        <WarningTriangleIcon />
         Report
       </Link>
     </li>

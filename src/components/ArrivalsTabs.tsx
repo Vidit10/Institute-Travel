@@ -8,7 +8,7 @@ import { type ArrivalEntry } from "@/components/ArrivalForm";
 const TABS = [
   { key: "here", label: "Outside now" },
   { key: "out", label: "Heading out" },
-  { key: "long", label: "Going home" },
+  { key: "long", label: "Long-distance" },
 ] as const;
 
 type TabKey = (typeof TABS)[number]["key"];

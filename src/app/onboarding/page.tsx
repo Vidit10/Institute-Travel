@@ -4,6 +4,14 @@ import { Suspense, useState } from "react";
 import { useSession } from "next-auth/react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { PROGRAMS, PROGRAM_LABELS, YEAR_OPTIONS_BY_PROGRAM, YEAR_LABELS, REQUEST_EXPIRY_HOURS } from "@/lib/constants";
+import IconSelect from "@/components/IconSelect";
+import { UndergradIcon, PostgradIcon, PhdIcon, yearIconFor } from "@/components/icons";
+
+const PROGRAM_ICON: Record<string, (props: { className?: string }) => React.JSX.Element> = {
+  UG: UndergradIcon,
+  PG: PostgradIcon,
+  PhD: PhdIcon,
+};
 
 const GENDER_LABELS: Record<string, string> = {
   female: "Female",
@@ -80,7 +88,8 @@ function OnboardingForm() {
         </p>
         <p className="mt-3 text-sm text-gray-600 dark:text-gray-300">
           This screen only shows up once, but there&apos;s more than rides here now — you can
-          always find a quick rundown of every feature from the <strong>?</strong> button up top.
+          always find a quick rundown of every feature from the <strong>? Help</strong> button
+          up top.
         </p>
         <button
           onClick={() => setShowIntro(false)}
@@ -141,39 +150,32 @@ function OnboardingForm() {
             <label className="block text-sm font-medium">
               Program <span className="text-red-500">*</span>
             </label>
-            <select
-              required
-              className="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 dark:border-gray-700 dark:bg-gray-900"
-              value={form.program}
-              onChange={(e) => setForm({ ...form, program: e.target.value, year: "" })}
-            >
-              {PROGRAMS.map((p) => (
-                <option key={p} value={p}>
-                  {PROGRAM_LABELS[p]}
-                </option>
-              ))}
-            </select>
+            <div className="mt-1">
+              <IconSelect
+                ariaLabel="Program"
+                value={form.program}
+                onChange={(program) => setForm({ ...form, program, year: "" })}
+                options={PROGRAMS.map((p) => ({ value: p, label: PROGRAM_LABELS[p], icon: PROGRAM_ICON[p] }))}
+              />
+            </div>
           </div>
 
           <div>
             <label className="block text-sm font-medium">
               Year <span className="text-red-500">*</span>
             </label>
-            <select
-              required
-              className="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 dark:border-gray-700 dark:bg-gray-900"
-              value={form.year}
-              onChange={(e) => setForm({ ...form, year: e.target.value })}
-            >
-              <option value="" disabled>
-                Select
-              </option>
-              {YEAR_OPTIONS_BY_PROGRAM[form.program as keyof typeof YEAR_OPTIONS_BY_PROGRAM].map((y) => (
-                <option key={y} value={y}>
-                  {YEAR_LABELS[y]}
-                </option>
-              ))}
-            </select>
+            <div className="mt-1">
+              <IconSelect
+                ariaLabel="Year"
+                value={form.year}
+                onChange={(year) => setForm({ ...form, year })}
+                options={YEAR_OPTIONS_BY_PROGRAM[form.program as keyof typeof YEAR_OPTIONS_BY_PROGRAM].map((y) => ({
+                  value: y,
+                  label: YEAR_LABELS[y],
+                  icon: yearIconFor(y),
+                }))}
+              />
+            </div>
           </div>
 
           <label className="flex items-start gap-2 text-sm">

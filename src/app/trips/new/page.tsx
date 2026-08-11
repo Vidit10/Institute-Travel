@@ -6,6 +6,9 @@ import { useSession } from "next-auth/react";
 import Link from "next/link";
 import NavBar from "@/components/NavBar";
 import ShareCTA from "@/components/ShareCTA";
+import InfoTip from "@/components/InfoTip";
+import IconSelect from "@/components/IconSelect";
+import { TrainIcon, PlaneIcon, BusModeIcon, AutoIcon, CabIcon, TumTumIcon } from "@/components/icons";
 import {
   PICKUP_LOCATIONS,
   CAMPUS_LOCATIONS,
@@ -96,6 +99,14 @@ const maxDateStr = toDateInputValue(new Date(today.getTime() + MAX_ADVANCE_DAYS 
 const HOURS_12 = Array.from({ length: 12 }, (_, i) => i + 1);
 
 const MODE_LABELS: Record<string, string> = { train: "Train", flight: "Flight", bus: "Bus" };
+const MODE_OPTIONS = TRIP_MODES.map((m) => ({ value: m, label: MODE_LABELS[m], icon: { train: TrainIcon, flight: PlaneIcon, bus: BusModeIcon }[m] }));
+const VEHICLE_ICON: Record<string, (props: { className?: string }) => React.JSX.Element> = {
+  "Auto Rickshaw": AutoIcon,
+  "Cab (5-seater)": CabIcon,
+  "Cab (7-seater)": CabIcon,
+  "Tum Tum": TumTumIcon,
+};
+const VEHICLE_OPTIONS = VEHICLE_TYPES.map((v) => ({ value: v, label: v, icon: VEHICLE_ICON[v] }));
 
 type SimilarTrip = {
   _id: string;
@@ -438,25 +449,21 @@ function NewTripForm() {
                 <label className="block text-sm font-medium">
                   Mode <span className="text-red-500">*</span>
                 </label>
-                <select
-                  className="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 dark:border-gray-700 dark:bg-gray-900"
-                  value={form.mode}
-                  onChange={(e) => {
-                    const mode = e.target.value;
-                    setForm((f) => ({
-                      ...f,
-                      mode,
-                      pickupLocation:
-                        f.direction === "to-campus" ? DEFAULT_PICKUP_BY_MODE[mode] || f.pickupLocation : f.pickupLocation,
-                    }));
-                  }}
-                >
-                  {TRIP_MODES.map((m) => (
-                    <option key={m} value={m}>
-                      {MODE_LABELS[m]}
-                    </option>
-                  ))}
-                </select>
+                <div className="mt-1">
+                  <IconSelect
+                    ariaLabel="Mode"
+                    value={form.mode}
+                    onChange={(mode) => {
+                      setForm((f) => ({
+                        ...f,
+                        mode,
+                        pickupLocation:
+                          f.direction === "to-campus" ? DEFAULT_PICKUP_BY_MODE[mode] || f.pickupLocation : f.pickupLocation,
+                      }));
+                    }}
+                    options={MODE_OPTIONS}
+                  />
+                </div>
               </div>
             )}
 
@@ -485,33 +492,25 @@ function NewTripForm() {
               <label className="block text-sm font-medium">
                 Vehicle for the onward trip <span className="text-red-500">*</span>
               </label>
-              <select
-                required
-                className="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 dark:border-gray-700 dark:bg-gray-900"
-                value={form.vehicleType}
-                onChange={(e) => {
-                  const vehicleType = e.target.value;
-                  const recommended = recommendedCapacity(form.listingType, vehicleType);
-                  setForm((f) => {
-                    const totalCapacity = recommended ?? f.totalCapacity;
-                    return {
-                      ...f,
-                      vehicleType,
-                      totalCapacity,
-                      numTravelers: Math.min(f.numTravelers, Math.max(1, totalCapacity - 1)),
-                    };
-                  });
-                }}
-              >
-                <option value="" disabled>
-                  Select
-                </option>
-                {VEHICLE_TYPES.map((v) => (
-                  <option key={v} value={v}>
-                    {v}
-                  </option>
-                ))}
-              </select>
+              <div className="mt-1">
+                <IconSelect
+                  ariaLabel="Vehicle for the onward trip"
+                  value={form.vehicleType}
+                  onChange={(vehicleType) => {
+                    const recommended = recommendedCapacity(form.listingType, vehicleType);
+                    setForm((f) => {
+                      const totalCapacity = recommended ?? f.totalCapacity;
+                      return {
+                        ...f,
+                        vehicleType,
+                        totalCapacity,
+                        numTravelers: Math.min(f.numTravelers, Math.max(1, totalCapacity - 1)),
+                      };
+                    });
+                  }}
+                  options={VEHICLE_OPTIONS}
+                />
+              </div>
               {form.listingType !== "local" && form.vehicleType && RECOMMENDED_CAPACITY[form.vehicleType] && (
                 <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
                   Recommended capacity: {RECOMMENDED_CAPACITY[form.vehicleType]} people (reduced from the max
@@ -769,14 +768,17 @@ function NewTripForm() {
             </div>
 
             {isFemale && (
-              <label className="flex items-center gap-2 text-sm">
-                <input
-                  type="checkbox"
-                  checked={form.girlsOnly}
-                  onChange={(e) => setForm({ ...form, girlsOnly: e.target.checked })}
-                />
-                Girls only
-              </label>
+              <div className="flex items-center gap-1">
+                <label className="flex items-center gap-2 text-sm">
+                  <input
+                    type="checkbox"
+                    checked={form.girlsOnly}
+                    onChange={(e) => setForm({ ...form, girlsOnly: e.target.checked })}
+                  />
+                  Girls only
+                </label>
+                <InfoTip text="Hidden entirely from anyone not marked female on their profile — not just visible-but-blocked." />
+              </div>
             )}
 
             {error && <p className="text-sm text-red-600 dark:text-red-400">{error}</p>}

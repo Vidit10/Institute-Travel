@@ -6,7 +6,16 @@ import Link from "next/link";
 import NavBar from "@/components/NavBar";
 import LoadingScreen from "@/components/LoadingScreen";
 import IDCardViewer from "@/components/IDCardViewer";
+import InfoTip from "@/components/InfoTip";
+import IconSelect from "@/components/IconSelect";
+import { UndergradIcon, PostgradIcon, PhdIcon, yearIconFor, IdCardIcon } from "@/components/icons";
 import { PROGRAMS, PROGRAM_LABELS, YEAR_OPTIONS_BY_PROGRAM, YEAR_LABELS } from "@/lib/constants";
+
+const PROGRAM_ICON: Record<string, (props: { className?: string }) => React.JSX.Element> = {
+  UG: UndergradIcon,
+  PG: PostgradIcon,
+  PhD: PhdIcon,
+};
 
 export default function SettingsPage() {
   const { update } = useSession();
@@ -120,41 +129,39 @@ export default function SettingsPage() {
             <label className="block text-sm font-medium">
               Program <span className="text-red-500">*</span>
             </label>
-            <select
-              required
-              className="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 dark:border-gray-700 dark:bg-gray-900"
-              value={form.program}
-              onChange={(e) => {
-                const program = e.target.value;
-                const validYears = YEAR_OPTIONS_BY_PROGRAM[program as keyof typeof YEAR_OPTIONS_BY_PROGRAM] as readonly string[];
-                setForm((f) => ({
-                  ...f,
-                  program,
-                  year: validYears.includes(f.year) ? f.year : "",
-                }));
-              }}
-            >
-              {PROGRAMS.map((p) => (
-                <option key={p} value={p}>{PROGRAM_LABELS[p]}</option>
-              ))}
-            </select>
+            <div className="mt-1">
+              <IconSelect
+                ariaLabel="Program"
+                value={form.program}
+                onChange={(program) => {
+                  const validYears = YEAR_OPTIONS_BY_PROGRAM[program as keyof typeof YEAR_OPTIONS_BY_PROGRAM] as readonly string[];
+                  setForm((f) => ({
+                    ...f,
+                    program,
+                    year: validYears.includes(f.year) ? f.year : "",
+                  }));
+                }}
+                options={PROGRAMS.map((p) => ({ value: p, label: PROGRAM_LABELS[p], icon: PROGRAM_ICON[p] }))}
+              />
+            </div>
           </div>
 
           <div>
             <label className="block text-sm font-medium">
               Year <span className="text-red-500">*</span>
             </label>
-            <select
-              required
-              className="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 dark:border-gray-700 dark:bg-gray-900"
-              value={form.year}
-              onChange={(e) => setForm({ ...form, year: e.target.value })}
-            >
-              <option value="" disabled>Select</option>
-              {YEAR_OPTIONS_BY_PROGRAM[form.program as keyof typeof YEAR_OPTIONS_BY_PROGRAM].map((y) => (
-                <option key={y} value={y}>{YEAR_LABELS[y]}</option>
-              ))}
-            </select>
+            <div className="mt-1">
+              <IconSelect
+                ariaLabel="Year"
+                value={form.year}
+                onChange={(year) => setForm({ ...form, year })}
+                options={YEAR_OPTIONS_BY_PROGRAM[form.program as keyof typeof YEAR_OPTIONS_BY_PROGRAM].map((y) => ({
+                  value: y,
+                  label: YEAR_LABELS[y],
+                  icon: yearIconFor(y),
+                }))}
+              />
+            </div>
           </div>
 
           <div>
@@ -169,15 +176,18 @@ export default function SettingsPage() {
             />
           </div>
 
-          <label className="flex items-start gap-2 text-sm">
-            <input
-              type="checkbox"
-              className="mt-1"
-              checked={form.contactShareDefaultConsent}
-              onChange={(e) => setForm({ ...form, contactShareDefaultConsent: e.target.checked })}
-            />
-            Share my phone number once a request is accepted
-          </label>
+          <div className="flex items-start gap-1">
+            <label className="flex items-start gap-2 text-sm">
+              <input
+                type="checkbox"
+                className="mt-1"
+                checked={form.contactShareDefaultConsent}
+                onChange={(e) => setForm({ ...form, contactShareDefaultConsent: e.target.checked })}
+              />
+              Share my phone number once a request is accepted
+            </label>
+            <InfoTip text="Only the specific host or rider on an accepted request ever sees your number — never anyone browsing the feed. This is just the default; you can still turn it off per trip." />
+          </div>
 
           {form.gender === "female" && (
             <label className="flex items-start gap-2 text-sm">
@@ -206,7 +216,10 @@ export default function SettingsPage() {
         </form>
 
         <div className="mt-8">
-          <h2 className="text-sm font-semibold">ID card</h2>
+          <h2 className="flex items-center gap-1.5 text-sm font-semibold">
+            <IdCardIcon className="text-gray-400 dark:text-gray-500" />
+            ID card
+          </h2>
           <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
             Stored only on this device — never uploaded anywhere. Kept handy for security checks
             when leaving campus.

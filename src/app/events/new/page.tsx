@@ -3,7 +3,15 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import NavBar from "@/components/NavBar";
+import IconSelect from "@/components/IconSelect";
+import { EVENT_CATEGORY_ICON } from "@/components/icons";
 import { EVENT_CATEGORIES, EVENT_CATEGORY_LABELS, MAX_EVENT_DESCRIPTION_LENGTH } from "@/lib/constants";
+
+const CATEGORY_OPTIONS = EVENT_CATEGORIES.map((c) => ({
+  value: c,
+  label: EVENT_CATEGORY_LABELS[c],
+  icon: EVENT_CATEGORY_ICON[c],
+}));
 
 export default function NewEventPage() {
   const router = useRouter();
@@ -58,17 +66,14 @@ export default function NewEventPage() {
             <label className="block text-sm font-medium">
               Category <span className="text-red-500">*</span>
             </label>
-            <select
-              className="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 dark:border-gray-700 dark:bg-gray-900"
-              value={category}
-              onChange={(e) => setCategory(e.target.value as (typeof EVENT_CATEGORIES)[number])}
-            >
-              {EVENT_CATEGORIES.map((c) => (
-                <option key={c} value={c}>
-                  {EVENT_CATEGORY_LABELS[c]}
-                </option>
-              ))}
-            </select>
+            <div className="mt-1">
+              <IconSelect
+                ariaLabel="Category"
+                value={category}
+                onChange={setCategory}
+                options={CATEGORY_OPTIONS}
+              />
+            </div>
           </div>
 
           <div>

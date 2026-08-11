@@ -11,6 +11,43 @@ import {
   MAX_RECOMMENDATION_VIBE_TAGS,
   MAX_RECOMMENDATION_COMMENT_LENGTH,
 } from "@/lib/constants";
+import { FOOD_TYPE_ACCENT } from "@/lib/categoryColors";
+import InfoTip from "@/components/InfoTip";
+import IconSelect from "@/components/IconSelect";
+import {
+  RECOMMENDATION_CATEGORY_ICON,
+  CafeIcon,
+  ParkIcon,
+  ArcadeIcon,
+  ShoppingIcon,
+  SpaIcon,
+  FitnessIcon,
+  NightlifeIcon,
+  OtherCategoryIcon,
+} from "@/components/icons";
+
+const CATEGORY_OPTIONS = RECOMMENDATION_CATEGORIES.map((c) => ({
+  value: c,
+  label: RECOMMENDATION_CATEGORY_LABELS[c],
+  icon: RECOMMENDATION_CATEGORY_ICON[c],
+}));
+
+const LEISURE_TYPE_ICON: Record<(typeof LEISURE_TYPES)[number], (props: { className?: string }) => React.JSX.Element> = {
+  Cafe: CafeIcon,
+  "Park/Outdoors": ParkIcon,
+  "Games/Arcade": ArcadeIcon,
+  Shopping: ShoppingIcon,
+  "Spa/Wellness": SpaIcon,
+  "Sports/Fitness": FitnessIcon,
+  Nightlife: NightlifeIcon,
+  Other: OtherCategoryIcon,
+};
+
+const LEISURE_TYPE_OPTIONS = LEISURE_TYPES.map((t) => ({
+  value: t,
+  label: t,
+  icon: LEISURE_TYPE_ICON[t],
+}));
 
 type Category = (typeof RECOMMENDATION_CATEGORIES)[number];
 
@@ -138,17 +175,28 @@ export default function RecommendationFields({
           <label className={labelClass}>
             Category {!compact && <span className="text-red-500">*</span>}
           </label>
-          <select
-            className={INPUT_CLASS}
-            value={draft.category}
-            onChange={(e) => changeCategory(e.target.value as Category)}
-          >
-            {RECOMMENDATION_CATEGORIES.map((c) => (
-              <option key={c} value={c}>
-                {RECOMMENDATION_CATEGORY_LABELS[c]}
-              </option>
-            ))}
-          </select>
+          {compact ? (
+            <select
+              className={INPUT_CLASS}
+              value={draft.category}
+              onChange={(e) => changeCategory(e.target.value as Category)}
+            >
+              {RECOMMENDATION_CATEGORIES.map((c) => (
+                <option key={c} value={c}>
+                  {RECOMMENDATION_CATEGORY_LABELS[c]}
+                </option>
+              ))}
+            </select>
+          ) : (
+            <div className="mt-1">
+              <IconSelect
+                ariaLabel="Category"
+                value={draft.category}
+                onChange={(c) => changeCategory(c)}
+                options={CATEGORY_OPTIONS}
+              />
+            </div>
+          )}
         </div>
 
         {compact && (
@@ -205,7 +253,10 @@ export default function RecommendationFields({
       {draft.category === "food" && (
         <div className={rowClass}>
           <div>
-            <label className={labelClass}>Veg / Non-veg</label>
+            <span className="flex items-center gap-1">
+              <label className={labelClass}>Veg / Non-veg</label>
+              {!compact && <InfoTip text={'"Both" means this place serves both veg and non-veg options — not that every dish is somehow both.'} />}
+            </span>
             {compact ? (
               <select
                 className={INPUT_CLASS}
@@ -225,10 +276,8 @@ export default function RecommendationFields({
                     key={t}
                     type="button"
                     onClick={() => set("foodType", t)}
-                    className={`rounded-lg border px-3 py-2 text-sm ${
-                      draft.foodType === t
-                        ? "border-brand-600 bg-brand-50 text-brand-700 dark:border-brand-500 dark:bg-brand-950 dark:text-brand-400"
-                        : "border-gray-300 dark:border-gray-700"
+                    className={`rounded-lg border px-3 py-2 text-sm font-medium ${
+                      draft.foodType === t ? FOOD_TYPE_ACCENT[t].selected : FOOD_TYPE_ACCENT[t].unselected
                     }`}
                   >
                     {FOOD_TYPE_LABELS[t]}
@@ -253,17 +302,28 @@ export default function RecommendationFields({
       {draft.category === "leisure" && (
         <div>
           <label className={labelClass}>Type</label>
-          <select
-            className={INPUT_CLASS}
-            value={draft.leisureType}
-            onChange={(e) => set("leisureType", e.target.value as (typeof LEISURE_TYPES)[number])}
-          >
-            {LEISURE_TYPES.map((t) => (
-              <option key={t} value={t}>
-                {t}
-              </option>
-            ))}
-          </select>
+          {compact ? (
+            <select
+              className={INPUT_CLASS}
+              value={draft.leisureType}
+              onChange={(e) => set("leisureType", e.target.value as (typeof LEISURE_TYPES)[number])}
+            >
+              {LEISURE_TYPES.map((t) => (
+                <option key={t} value={t}>
+                  {t}
+                </option>
+              ))}
+            </select>
+          ) : (
+            <div className="mt-1">
+              <IconSelect
+                ariaLabel="Leisure type"
+                value={draft.leisureType}
+                onChange={(t) => set("leisureType", t)}
+                options={LEISURE_TYPE_OPTIONS}
+              />
+            </div>
+          )}
         </div>
       )}
 
@@ -284,7 +344,10 @@ export default function RecommendationFields({
 
       {vibeTagOptions && (
         <div>
-          <label className={labelClass}>Good for {!compact && `(optional, up to ${MAX_RECOMMENDATION_VIBE_TAGS})`}</label>
+          <span className="flex items-center gap-1">
+            <label className={labelClass}>Good for {!compact && `(optional, up to ${MAX_RECOMMENDATION_VIBE_TAGS})`}</label>
+            {!compact && <InfoTip text="Tags help people filter for the right occasion — a place can be great for a quick bite but wrong for a birthday, or vice versa." />}
+          </span>
           <div className="mt-1 flex flex-wrap gap-1.5">
             {vibeTagOptions.map((tag) => (
               <button

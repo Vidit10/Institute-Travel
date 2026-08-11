@@ -13,6 +13,7 @@ import InviteFriendsPrompt from "@/components/InviteFriendsPrompt";
 import QuickActions from "@/components/QuickActions";
 import UpcomingEvents from "@/components/UpcomingEvents";
 import ArrivalsTabs from "@/components/ArrivalsTabs";
+import { BrowseIcon } from "@/components/icons";
 import {
   PICKUP_LOCATIONS,
   CAMPUS_LOCATIONS,
@@ -157,7 +158,7 @@ export default function HomePage() {
   const [isFiltered, setIsFiltered] = useState(false);
   const [lastSearchSummary, setLastSearchSummary] = useState("");
 
-  const [filterListingType, setFilterListingType] = useState<(typeof LISTING_TYPES)[number]>("long-distance");
+  const [filterListingType, setFilterListingType] = useState<(typeof LISTING_TYPES)[number]>("local");
   const [filterDirection, setFilterDirection] = useState<(typeof DIRECTIONS)[number]>("to-campus");
   const [filterLocation, setFilterLocation] = useState("");
   const [filterDate, setFilterDate] = useState("");
@@ -295,7 +296,8 @@ export default function HomePage() {
 
         <hr className="mt-6 border-gray-200 dark:border-gray-800" />
 
-        <h2 className="mt-6 text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
+        <h2 className="mt-6 flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
+          <BrowseIcon className="text-gray-400 dark:text-gray-500" />
           Browse all trips
         </h2>
 
@@ -425,7 +427,7 @@ export default function HomePage() {
 
         {!loading && !isFiltered && trips.length === 0 && (
           <EmptyState>
-            No open trips yet. Be the first to{" "}
+            No open trips yet — the feed is as empty as an 9 AM lecture hall. Be the first to{" "}
             <Link href="/trips/new" className="text-brand-600 underline dark:text-brand-500">
               list one
             </Link>

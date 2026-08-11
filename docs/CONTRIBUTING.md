@@ -163,24 +163,68 @@ scope and what's explicitly deferred.
   is deliberately **not** part of `QuickActions.tsx`'s row (bus tracker/SAM/ID card), since
   those are utility links and Events is a full content type; don't fold it back into that
   component. `src/components/NavBar.tsx`'s desktop header also links directly to `/events`.
+  `src/app/api/admin/metrics/route.ts` also surfaces aggregate Events/Recommendations stats
+  (counts, category/status breakdowns, RSVP/vote totals) on the admin dashboard — this was
+  missing entirely for a while after both features shipped, so if you add a new content type,
+  add its stats here in the same PR rather than leaving the dashboard blind to it again.
 - **Help** (`src/app/help/page.tsx`, `src/lib/helpTopics.ts`, `src/components/HelpButton.tsx`):
   a static, always-current feature explainer, replacing the onboarding intro
   (`src/app/onboarding/page.tsx`) as the real "what does this app do" source of truth, since
   that intro is only ever shown once. **Add a short section here in the same PR as any new
-  user-facing feature** — a heading, 1–2 sentences, one link, following the existing entries'
-  shape — and add its route prefix to `HELP_TOPICS` in `helpTopics.ts` so the "?" button's
-  context-aware jump (`/help#<topic>`) keeps working. Keep entries brief; this page's value is
-  in staying skimmable, not in being complete.
+  user-facing feature** — a heading (with an icon — every topic has one, see `icons.tsx`),
+  1–2 sentences, one link, following the existing entries' shape — and add its route prefix to
+  `HELP_TOPICS` in `helpTopics.ts` so the "?" button's context-aware jump (`/help#<topic>`)
+  keeps working. Keep entries brief; this page's value is in staying skimmable, not in being
+  complete.
 - **Icons** (`src/components/icons.tsx`): one shared module for small hand-drawn icons —
-  category icons (Recommendations/Events), status icons (open/pending → dot, accepted/
-  completed → check, declined/cancelled/expired → x), and Account-menu/header icons. Hand-drawn
-  (no icon-library dependency) was a deliberate call for load-time reasons — see
-  `memory/decisions-log.md`. Icons are applied **only** to frequently-scanned lists/badges
-  (category badges, status pills, the Account menu, the two desktop header buttons) — explicitly
-  **not** on forms (Settings, Feedback), the 3-item Arrivals tab switcher, one-off action buttons
-  (Save/Cancel), or admin pages. That's not an oversight — those were evaluated and rejected as
-  adding visual weight without adding information. Don't add icons to a new spot without asking
-  the same question: does this help someone scan a list, or is it decoration?
+  category icons (Recommendations/Events, plus `LEISURE_TYPES` sub-icons), status icons
+  (open/pending → dot, accepted/completed → check, declined/cancelled/expired → x), bare action
+  icons (`WarningTriangleIcon`/`XIcon`/`CheckIcon` for Report/Cancel/Accept — deliberately
+  distinct from the circled status icons, which mean *state* not *action*), mode/vehicle icons
+  (Train/Plane/Bus, Auto/Cab/TumTum), Program icons, `yearIconFor()` (a circled-digit badge
+  computed from the value, not 15+ hand-drawn near-duplicates for something that's just an
+  ordinal), and named-section icons (`HomeMenuIcon`/`QuickActionsIcon`/`BrowseIcon`/`IdCardIcon`
+  — Help's topic headings, the home page's "Browse all trips" heading, Settings' "ID card"
+  heading). **Every heading that names a stable feature/section gets an icon** — `<Icon
+  className="text-gray-400 dark:text-gray-500" /> {label}` is the pattern, applied consistently
+  rather than left as an exercise per-page; a heading for a transient/contextual thing (a
+  request count, a search-result grouping, a one-time review-step confirmation) does not, since
+  those aren't named features to recognize at a glance. Hand-drawn (no icon-library dependency)
+  was a deliberate call for load-time reasons —
+  see `memory/decisions-log.md`. Icons are applied to frequently-scanned lists/badges, dropdown
+  options (via `IconSelect`, below), the Account menu, and paired action buttons — **still not**
+  on plain form-field labels (party size, fare, capacity — self-evident from the label) or the
+  3-item Arrivals tab switcher. Before adding an icon anywhere new, ask: does this help someone
+  scan/act faster, or is it decoration?
+- **`IconSelect`** (`src/components/IconSelect.tsx`): a custom dropdown replacing native
+  `<select>` wherever every option has a meaningful icon — same trigger-button-plus-panel
+  interaction pattern as `AccountMenu` (click-outside/Escape to close, `py-2.5` touch targets),
+  not a new standard. `value` is typed as plain `string` (not the option-value generic) on
+  purpose, so a not-yet-chosen `""` placeholder doesn't need to be a member of the option union.
+  Applied to public-facing category/mode/vehicle/program/year selects; admin's `compact` review
+  forms keep native `<select>` (functional, internal-only — matches this repo's existing
+  "admin isn't where the polish budget goes" precedent). Native `<select>` can't show per-option
+  icons in any browser, which is the entire reason this component exists — don't build a second
+  one; extend this if a new dropdown needs it.
+- **`InfoTip`** (`src/components/InfoTip.tsx`): a small "i" button with a hover (desktop) / tap
+  (mobile) popover. The visible glyph is ~14px but the button's padding gives it a much larger
+  real hit area — solves "small icon = imprecise touch target" via padding, not by making the
+  icon itself bigger and louder. Desktop hover is CSS-only (`group-hover`); touch devices never
+  fire real hover, so tapping toggles a React `open` state instead — one component, both modes,
+  no device-sniffing. Skip adding one anywhere that already has adjacent explanatory copy (e.g.
+  the arrivals-board `blurb` paragraphs) — a redundant tooltip is pure visual weight.
+- **`ThemeToggle` / `ThemeMenuItem`** (`src/components/ThemeToggle.tsx`): one `useMountedTheme()`
+  hook, two presentations — `ThemeToggle` (bare icon button, mobile header) and `ThemeMenuItem`
+  (icon+label row, Account menu). Desktop's top nav deliberately has no standalone theme icon —
+  see SPEC.md §12 for why it moved into the Account menu.
+- **`useInstallPrompt`** (`src/lib/useInstallPrompt.ts`): captures `beforeinstallprompt` as a
+  **module-level singleton**, not per-component state — the event fires once, early, so capturing
+  it in one shared place (rather than whichever component mounts first) lets both
+  `InstallPrompt.tsx` (dismissible banner, now a 14-day snooze instead of a permanent dismiss)
+  and `AccountMenu.tsx`'s persistent "Install app" row react to the same captured event. iOS
+  never fires that event at all (no native install prompt), so `canInstall`/`isIos` there just
+  means "not already running standalone" — the actual install is the manual Share flow, surfaced
+  via the same `InfoTip` popover mechanics rather than a dead button.
 
 ## Local setup
 

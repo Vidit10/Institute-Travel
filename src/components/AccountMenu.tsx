@@ -3,10 +3,48 @@
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { signOut, useSession } from "next-auth/react";
-import { AdminIcon, RidesMenuIcon, BookmarkMenuIcon, CalendarMenuIcon, GearIcon, MessageIcon, SignOutIcon } from "./icons";
+import { AdminIcon, RidesMenuIcon, BookmarkMenuIcon, CalendarMenuIcon, GearIcon, MessageIcon, SignOutIcon, DownloadIcon } from "./icons";
+import { ThemeMenuItem } from "./ThemeToggle";
+import { useInstallPrompt } from "@/lib/useInstallPrompt";
+import InfoTip from "./InfoTip";
 
 const ITEM_CLASS =
   "flex w-full items-center gap-2.5 rounded-md px-3 py-2 text-left text-sm text-gray-600 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-800";
+
+// A persistent, always-findable install entry point — unlike the dismissible
+// banner (InstallPrompt.tsx), this doesn't go away after a snooze. iOS has no
+// native install prompt to trigger, so it just surfaces the same manual
+// instructions via InfoTip instead of being a dead button.
+function InstallMenuItem({ onClick }: { onClick: () => void }) {
+  const { canInstall, isIos, promptInstall } = useInstallPrompt();
+  if (!canInstall) return null;
+
+  if (isIos) {
+    return (
+      <div className={`${ITEM_CLASS} justify-between`}>
+        <span className="flex items-center gap-2.5">
+          <DownloadIcon className="text-gray-400 dark:text-gray-500" />
+          Install app
+        </span>
+        <InfoTip text={'Tap Share, then "Add to Home Screen".'} align="right" />
+      </div>
+    );
+  }
+
+  return (
+    <button
+      type="button"
+      onClick={async () => {
+        await promptInstall();
+        onClick();
+      }}
+      className={ITEM_CLASS}
+    >
+      <DownloadIcon className="text-gray-400 dark:text-gray-500" />
+      Install app
+    </button>
+  );
+}
 
 function UserIcon() {
   return (
@@ -56,6 +94,8 @@ function AccountPanelItems({ onNavigate }: { onNavigate: () => void }) {
         <MessageIcon className="text-gray-400 dark:text-gray-500" />
         Feedback
       </Link>
+      <ThemeMenuItem className={ITEM_CLASS} onClick={onNavigate} />
+      <InstallMenuItem onClick={onNavigate} />
       {session?.user && (
         <button
           onClick={() => signOut({ callbackUrl: "/login" })}

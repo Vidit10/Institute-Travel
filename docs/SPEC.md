@@ -239,32 +239,43 @@ this — it's just how many instances are mounted simultaneously.
   looking similarly compact — it's a full content type (its own create/RSVP/detail flow, a
   peer to Trips/Recommendations), not a utility link, so it gets its own section rather than a
   tile alongside external links. Then the arrivals board
-  as a 3-way tab switcher ahead of everything else — "Are you outside right now?" (local,
-  to-campus), "Heading out?" (local, from-campus), and "Going home or coming back?"
-  (long-distance, with its own to-campus/from-campus toggle — kept as a separate tab rather
-  than folded into the local toggle, since it's a different-enough use case — once/twice a
-  semester, its own location list — that merging it back in would recreate the clutter the
-  split was meant to fix; see §11), plus a "Already booked a vehicle? List it →" button below
-  the tabs. That button's destination tracks whichever tab (and, for the long-distance tab,
-  whichever direction toggle) is currently active — "Outside now"/"Heading out" always link to
-  a local trip in that section's fixed direction, "Going home or coming back?" links to a
-  long-distance trip in whichever direction is currently selected there, so the button always
-  means "list the trip I'm looking at," not just "list a local trip" regardless of context.
-  Below a divider, the full open-trips feed is shown by default under a "Browse all
-  trips" heading, with a time/location search collapsed behind a toggle rather than always
-  visible. This structure (quick actions → primary arrivals/list action → de-emphasized
-  browse-everything feed) replaced an earlier version that stacked all three arrivals sections
-  plus the feed in one long scroll with no visual hierarchy.
+  as a 3-way tab switcher ahead of everything else — "Outside now" (local, to-campus), "Heading
+  out" (local, from-campus), and "Long-distance" (its section title once selected is the fuller
+  "Going home or coming back?" — with its own to-campus/from-campus toggle, kept as a separate
+  tab rather than folded into the local toggle, since it's a different-enough use case —
+  once/twice a semester, its own location list — that merging it back in would recreate the
+  clutter the split was meant to fix; see §11). The tab was originally labeled "Going home,"
+  which only described one of its two directions — renamed since a returning-to-campus search
+  landing on a tab called "Going home" read as wrong. Below the tabs, a "Already booked a
+  vehicle? List it →" button whose destination tracks whichever tab (and, for the Long-distance
+  tab, whichever direction toggle) is currently active — "Outside now"/"Heading out" always link
+  to a local trip in that section's fixed direction, "Long-distance" links to a long-distance
+  trip in whichever direction is currently selected there, so the button always means "list the
+  trip I'm looking at," not just "list a local trip" regardless of context. Below a divider, the
+  full open-trips feed is shown by default under a "Browse all trips" heading, with a
+  time/location search collapsed behind a toggle rather than always visible — that search
+  defaults to a **local** trip search (was long-distance), since local campus↔city hops are the
+  everyday use case and long-distance is the once-a-semester one. This structure (quick actions
+  → primary arrivals/list action → de-emphasized browse-everything feed) replaced an earlier
+  version that stacked all three arrivals sections plus the feed in one long scroll with no
+  visual hierarchy.
 - **Mobile** (below the `sm` breakpoint): a fixed bottom tab bar — Home, Recommendations, a
   center "List a trip" action, My Rides, Account. (Arrivals no longer has a tab — it's not a
   standalone page anymore, see §11 — and Recommendations, previously reachable only via the
-  Account menu, took the freed slot.)
-- **Desktop/tablet**: a simplified top nav — brand, two header links (Recommendations,
-  Events — currently standing in for what was originally a single "List a trip" CTA slot;
-  see `memory/decisions-log.md` for why and note this is explicitly a "for now" state, not a
-  final call on desktop nav structure), notification bell, theme toggle, Account. Other
-  low-frequency actions still live inside the Account item, shared between both nav layouts
-  via one component so they can't drift apart.
+  Account menu, took the freed slot.) The slim top header alongside it keeps notification bell,
+  "? Help", and a theme toggle — unchanged; see the desktop bullet below for why desktop's
+  header shed the theme toggle but mobile's didn't.
+- **Desktop/tablet**: a simplified top nav — brand, two header links (Recommendations, Events —
+  currently standing in for what was originally a single "List a trip" CTA slot; see
+  `memory/decisions-log.md` for why and note this is explicitly a "for now" state, not a final
+  call on desktop nav structure), a vertical divider, then notification bell, "? Help" (icon +
+  label, not a bare circle), and Account. **Theme toggle is deliberately not a top-level
+  element here** — it moved into the Account dropdown (as a labeled row, not just an icon) once
+  Help grew a text label and the row started feeling crowded; light/dark is a one-time-ish
+  preference, not glanceable state the way an unread-notification badge is, so it was the one
+  reasonable thing to relocate. Other low-frequency actions (Settings, Feedback, Sign out, and
+  now also an "Install app" row — see §26) live inside the same Account item, shared between
+  both nav layouts via one component so they can't drift apart.
 - **My Rides**: `/trips/mine` (hosting) and `/trips/requested` (requested) are presented as
   one "My Rides" concept via a shared tab-link component, even though they remain separate
   routes.
@@ -324,7 +335,8 @@ still reached via the Account menu, same as before.
   fields — which fields show depends on category, validated per-category server-side
   (`recommendationFieldsSchema` in `src/lib/recommendationValidation.ts`, shared between the
   public create route and the admin edit-and-approve route so the rules can't drift apart):
-  - **Food & Dining**: veg/non-veg/both (`FOOD_TYPES`), recommended dishes (comma-separated,
+  - **Food & Dining**: veg/non-veg/both (`FOOD_TYPES`, color-coded green/red/amber — see
+    `FOOD_TYPE_ACCENT` in `src/lib/categoryColors.ts`), recommended dishes (comma-separated,
     up to `MAX_RECOMMENDATION_DISHES`), and "good for" tags.
   - **Leisure**: a type (`LEISURE_TYPES` — Cafe, Park/Outdoors, Games/Arcade, Shopping,
     Spa/Wellness, Sports/Fitness, Nightlife, Other) and "good for" tags.
@@ -377,7 +389,9 @@ still reached via the Account menu, same as before.
   never a history. `GET /api/recommendations` attaches each post's net score and the viewer's
   own vote in one extra query (small dataset, no aggregation pipeline needed). Voting doesn't
   change the board's sort order — posts stay newest-first within category; this ships the
-  visible signal without also changing how the board is organized.
+  visible signal without also changing how the board is organized. When an admin approves a
+  submission, the poster's own vote is cast automatically (Reddit-style — a fresh vote, never a
+  toggle-off, since a submitter can't have voted on their own not-yet-approved post).
 - **Suggested edits, open to any user, admin-gated** (`src/models/
   RecommendationEditSuggestion.ts`, `src/lib/recommendationEditSuggestions.ts`,
   `/api/recommendations/[id]/suggest-edit`, `/api/admin/recommendations/edit-suggestions*`):
@@ -548,8 +562,9 @@ Account menu for both surfaces.
   Academic, Something else), location (free text — an event's venue isn't drawn from a small
   closed set the way Trip's pickup locations are), optional map link (raw URL, shown as-is,
   same pattern as Recommendation's `mapLink`), start time (must be in the future, within
-  `MAX_EVENT_ADVANCE_DAYS` — 60, longer than Trip's 30-day window since something like a fest
-  may be planned further out), and an optional capacity (unset = unlimited).
+  `MAX_EVENT_ADVANCE_DAYS` — 180 (6 months), longer than Trip's 30-day window since something
+  like a fest may be planned a full semester ahead), and an optional capacity (unset =
+  unlimited).
 - **RSVP for a group**: like Trip's `numTravelers`, an RSVP carries a `partySize` — you can
   RSVP for your own group, not just yourself.
 - **Capacity is claimed atomically**, same concurrency-safe pattern as Trip's seat count (a
@@ -583,8 +598,9 @@ Account menu for both surfaces.
 ## 25. Help
 
 A persistent, always-revisitable feature explainer (`/help`,
-`src/app/help/page.tsx`) — reached via a small "?" icon in `NavBar.tsx`, present on both the
-desktop header and the mobile slim header (`src/components/HelpButton.tsx`). It exists because
+`src/app/help/page.tsx`) — reached via a "? Help" button (icon + label, not a bare circle) in
+`NavBar.tsx`, present on both the desktop header and the mobile slim header
+(`src/components/HelpButton.tsx`). It exists because
 the onboarding intro screen (`src/app/onboarding/page.tsx`'s `showIntro` block) is only ever
 shown once at signup and structurally can't stay current as features get added — Help is now
 the actual source of truth for "what does this app do," and onboarding's intro just points to
@@ -602,3 +618,35 @@ it (one added sentence) rather than trying to duplicate it.
   student needs to sign in before reading it, same as before reaching any other page.
 - **Update this page in the same PR as any new feature**, the same convention this file and
   CONTRIBUTING.md already follow — an out-of-date Help page defeats its own purpose.
+
+## 26. Icon dropdowns, info tooltips, and other small polish
+
+A batch of related UI changes, grouped here since they share one theme: making the app read as
+more finished without making any single screen busier. Implementation detail lives in
+CONTRIBUTING.md; this section covers the user-facing behavior.
+
+- **Icon dropdowns**: category pickers (Recommendations, Events), Trip mode/vehicle, Feedback
+  category, and Program/Year (Settings + onboarding) are now a custom dropdown showing an icon
+  next to each option, not a native `<select>` — no browser can show per-option icons in a
+  native select, which is the whole reason. Admin's compact review forms keep native selects
+  (functional, internal-only, unchanged).
+- **Info tooltips**: a small "i" button next to fields/controls whose purpose isn't obvious from
+  the label alone — hover on desktop, tap on mobile, same button either way. Deliberately not
+  applied everywhere; skipped anywhere that already has adjacent explanatory text (e.g. the
+  arrivals-board `blurb` paragraphs), since a redundant tooltip is just more visual weight for
+  no new information.
+- **Veg / Non-veg / Both**: color-coded on the Recommendations create form and on posted cards —
+  green/red/amber, both as a subtle unselected tint and a fuller selected fill.
+- **Recommendation auto-upvote**: when an admin approves a submission, the original poster's own
+  vote is cast automatically (Reddit-style — your own post starts at your own upvote).
+- **Action icons**: Report (warning triangle), Cancel (×), Accept (✓) — icon always paired with
+  text, never icon-only, same rule this app has followed for every icon added this session.
+- **Install app**: alongside the existing dismissible install banner (which now snoozes for 14
+  days instead of disappearing forever on dismiss), the Account menu has a persistent "Install
+  app" row — reachable any time, regardless of whether the banner was snoozed. iOS (no native
+  install prompt available) shows the same manual "Add to Home Screen" instructions via the same
+  info-tooltip mechanism instead of a dead button.
+- **A little dry humor**, sparingly: the 404 page, the home page's very first empty state, and
+  the "event is full" tooltip — matching the tone already established by the rate-limit lockout
+  message (`src/lib/rateLimit.ts`). Not applied to onboarding's core copy or the login page —
+  those are the wrong place to be cute.

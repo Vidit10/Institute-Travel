@@ -7,7 +7,8 @@ import NavBar from "@/components/NavBar";
 import LoadingScreen from "@/components/LoadingScreen";
 import { EVENT_CATEGORIES, EVENT_CATEGORY_LABELS, YEAR_LABELS, PROGRAM_LABELS } from "@/lib/constants";
 import { EVENT_CATEGORY_ACCENT } from "@/lib/categoryColors";
-import { EVENT_CATEGORY_ICON, StatusOkIcon, StatusNoIcon } from "@/components/icons";
+import { EVENT_CATEGORY_ICON, StatusOkIcon, StatusNoIcon, WarningTriangleIcon, XIcon } from "@/components/icons";
+import InfoTip from "@/components/InfoTip";
 
 type EventDetail = {
   _id: string;
@@ -194,6 +195,7 @@ export default function EventDetailPage() {
             >
               {full ? "Full" : busy ? "RSVPing..." : "RSVP"}
             </button>
+            {full && <InfoTip text="No spots left — try asking nicely, or wait for someone to bail." />}
           </div>
         )}
 
@@ -216,8 +218,9 @@ export default function EventDetailPage() {
             type="button"
             onClick={cancelEvent}
             disabled={busy}
-            className="mt-4 rounded-md border border-red-300 px-3 py-1.5 text-sm text-red-600 hover:bg-red-50 dark:border-red-900 dark:text-red-400 dark:hover:bg-red-950"
+            className="mt-4 inline-flex items-center gap-1.5 rounded-md border border-red-300 px-3 py-1.5 text-sm text-red-600 hover:bg-red-50 dark:border-red-900 dark:text-red-400 dark:hover:bg-red-950"
           >
+            <XIcon />
             Cancel event
           </button>
         )}
@@ -241,8 +244,9 @@ export default function EventDetailPage() {
         <p className="mt-4 text-xs text-gray-400 dark:text-gray-500">
           <Link
             href={`/feedback?category=report&context=${encodeURIComponent(`Event "${event.title}" (id: ${event._id})`)}`}
-            className="hover:underline"
+            className="inline-flex items-center gap-1 hover:underline"
           >
+            <WarningTriangleIcon />
             Report this event
           </Link>
         </p>

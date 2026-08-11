@@ -3,13 +3,15 @@
 import { Suspense, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import NavBar from "@/components/NavBar";
+import IconSelect from "@/components/IconSelect";
+import { LightbulbIcon, BugIcon, WarningTriangleIcon, ProfileIcon, OtherCategoryIcon } from "@/components/icons";
 
 const CATEGORIES = [
-  { value: "recommendation", label: "Recommendation" },
-  { value: "bug", label: "Bug" },
-  { value: "report", label: "Report a trip, user, recommendation, or event" },
-  { value: "profile_correction", label: "Fix my name or gender" },
-  { value: "other", label: "Something else" },
+  { value: "recommendation", label: "Recommendation", icon: LightbulbIcon },
+  { value: "bug", label: "Bug", icon: BugIcon },
+  { value: "report", label: "Report a trip, user, recommendation, or event", icon: WarningTriangleIcon },
+  { value: "profile_correction", label: "Fix my name or gender", icon: ProfileIcon },
+  { value: "other", label: "Something else", icon: OtherCategoryIcon },
 ];
 
 export default function FeedbackPage() {
@@ -82,18 +84,9 @@ function FeedbackForm() {
             <label className="block text-sm font-medium">
               Category <span className="text-red-500">*</span>
             </label>
-            <select
-              required
-              className="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100"
-              value={category}
-              onChange={(e) => setCategory(e.target.value)}
-            >
-              {CATEGORIES.map((c) => (
-                <option key={c.value} value={c.value}>
-                  {c.label}
-                </option>
-              ))}
-            </select>
+            <div className="mt-1">
+              <IconSelect ariaLabel="Category" value={category} onChange={setCategory} options={CATEGORIES} />
+            </div>
           </div>
 
           <div>

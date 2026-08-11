@@ -7,6 +7,7 @@ import NavBar from "@/components/NavBar";
 import LoadingScreen from "@/components/LoadingScreen";
 import ShareCTA from "@/components/ShareCTA";
 import { REFERENCE_FARES, YEAR_LABELS, PROGRAM_LABELS, REQUEST_EXPIRY_HOURS } from "@/lib/constants";
+import { WarningTriangleIcon, XIcon, CheckIcon } from "@/components/icons";
 
 // Mirrors the server's real rule (src/app/api/trips/[id]/requests/route.ts):
 // whichever comes first, the configured window or the trip's own departure.
@@ -254,8 +255,9 @@ function TripDetailContent() {
           href={`/feedback?category=report&context=${encodeURIComponent(
             `Trip ${trip.pickupLocation} → ${trip.destination}, hosted by ${host.name} (id: ${trip._id})`
           )}`}
-          className="mt-2 block text-center text-xs text-gray-400 hover:underline dark:text-gray-500"
+          className="mt-2 flex items-center justify-center gap-1 text-center text-xs text-gray-400 hover:underline dark:text-gray-500"
         >
+          <WarningTriangleIcon />
           Report this trip
         </Link>
 
@@ -313,8 +315,9 @@ function TripDetailContent() {
           ) : (
             <button
               onClick={() => setConfirmingCancel(true)}
-              className="mt-4 w-full rounded-lg border border-red-200 px-4 py-2.5 text-sm font-medium text-red-600 hover:bg-red-50 dark:border-red-900 dark:text-red-400 dark:hover:bg-red-950"
+              className="mt-4 flex w-full items-center justify-center gap-1.5 rounded-lg border border-red-200 px-4 py-2.5 text-sm font-medium text-red-600 hover:bg-red-50 dark:border-red-900 dark:text-red-400 dark:hover:bg-red-950"
             >
+              <XIcon />
               Cancel this trip
             </button>
           )
@@ -364,15 +367,17 @@ function TripDetailContent() {
                       <button
                         onClick={() => respond(r._id, "accept")}
                         disabled={busy}
-                        className="rounded bg-brand-600 px-4 py-1.5 text-sm text-white hover:bg-brand-700"
+                        className="flex items-center gap-1.5 rounded bg-brand-600 px-4 py-1.5 text-sm text-white hover:bg-brand-700"
                       >
+                        <CheckIcon />
                         Accept
                       </button>
                       <button
                         onClick={() => respond(r._id, "decline")}
                         disabled={busy}
-                        className="rounded bg-gray-200 px-4 py-1.5 text-sm hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600"
+                        className="flex items-center gap-1.5 rounded bg-gray-200 px-4 py-1.5 text-sm hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600"
                       >
+                        <XIcon />
                         Decline
                       </button>
                       </div>
