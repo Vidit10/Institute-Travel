@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import ArrivalsBoard from "@/components/ArrivalsBoard";
 import { type ArrivalEntry } from "@/components/ArrivalForm";
 
@@ -11,6 +12,7 @@ const TABS = [
 ] as const;
 
 type TabKey = (typeof TABS)[number]["key"];
+type Direction = "to-campus" | "from-campus";
 
 // Renders only the active board instead of stacking all three — the arrivals
 // section was the single biggest contributor to the home page's "too much to
@@ -24,6 +26,22 @@ export default function ArrivalsTabs(props: {
   onWithdrawn: () => void;
 }) {
   const [tab, setTab] = useState<TabKey>("here");
+  // The long-distance board toggles its own direction internally — this just
+  // mirrors it so the "List it" link below can stay in sync (see
+  // ArrivalsBoard's onDirectionChange).
+  const [longDistanceDirection, setLongDistanceDirection] = useState<Direction>("to-campus");
+
+  // What "already booked a vehicle? List it" should mean depends entirely on
+  // which board you're looking at — posting from "Outside now"/"Heading out"
+  // means a local trip in that fixed direction; posting from "Going home"
+  // means a long-distance trip in whichever direction is currently toggled
+  // there (covers both "going home" and "coming back to college").
+  const listHref =
+    tab === "here"
+      ? "/trips/new?listingType=local&direction=to-campus"
+      : tab === "out"
+        ? "/trips/new?listingType=local&direction=from-campus"
+        : `/trips/new?listingType=long-distance&direction=${longDistanceDirection}`;
 
   return (
     <div className="mt-4">
@@ -71,9 +89,19 @@ export default function ArrivalsTabs(props: {
             showClusterExpansion
             title="Going home or coming back?"
             blurb="For longer trips — train, flight, or bus. Log your travel time and see who else is around."
+            onDirectionChange={setLongDistanceDirection}
             {...props}
           />
         )}
+      </div>
+
+      <div className="mt-3">
+        <Link
+          href={listHref}
+          className="flex items-center justify-center rounded-lg border border-brand-600 px-4 py-2.5 text-sm font-medium text-brand-600 hover:bg-brand-50 dark:border-brand-500 dark:text-brand-500 dark:hover:bg-brand-950"
+        >
+          Already booked a vehicle? List it →
+        </Link>
       </div>
     </div>
   );

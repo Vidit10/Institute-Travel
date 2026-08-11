@@ -192,7 +192,6 @@ function NewTripForm() {
   const perPersonShare = form.numTravelers > 0 ? fareNumber / form.numTravelers : 0;
   const departureDate = buildDepartureDate(form.dateStr, form.hour, form.minute, form.ampm);
 
-  const combo = resolveTripCombo(form.listingType, form.direction);
   const locations = locationConfig(form.listingType, form.direction);
   const effectivePickup = form.pickupLocation === "Others" ? form.pickupOther.trim() : form.pickupLocation;
   const effectiveDestination =
@@ -370,7 +369,7 @@ function NewTripForm() {
     <>
       <NavBar />
       <main className="mx-auto max-w-md px-4 py-6 pb-20 sm:pb-6">
-        <h1 className="text-lg font-semibold">List a trip</h1>
+        <h1 className="text-xl font-bold">List a trip</h1>
 
         {!confirming ? (
           <form onSubmit={handleReview} className="mt-4 space-y-4">

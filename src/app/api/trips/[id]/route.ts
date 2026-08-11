@@ -4,7 +4,6 @@ import { authOptions } from "@/lib/auth";
 import { dbConnect } from "@/lib/mongodb";
 import { Trip } from "@/models/Trip";
 import { JoinRequest } from "@/models/JoinRequest";
-import { User } from "@/models/User";
 import { CompanionInvite } from "@/models/CompanionInvite";
 import { sweepExpired } from "@/lib/expireRequests";
 

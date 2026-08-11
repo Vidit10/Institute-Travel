@@ -4,7 +4,9 @@ import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import NavBar from "@/components/NavBar";
 import LoadingScreen from "@/components/LoadingScreen";
+import EmptyState from "@/components/EmptyState";
 import { EVENT_CATEGORIES, EVENT_CATEGORY_LABELS } from "@/lib/constants";
+import { EVENT_CATEGORY_ACCENT } from "@/lib/categoryColors";
 
 type EventListing = {
   _id: string;
@@ -23,10 +25,10 @@ function EventCard({ event }: { event: EventListing }) {
   return (
     <Link
       href={`/events/${event._id}`}
-      className="block rounded-lg border border-gray-200 bg-white p-4 hover:border-brand-300 dark:border-gray-800 dark:bg-gray-900 dark:hover:border-brand-700"
+      className="block rounded-xl border border-gray-200 bg-white p-4 shadow-sm transition-shadow hover:border-brand-300 hover:shadow-md dark:border-gray-800 dark:bg-gray-900 dark:hover:border-brand-700"
     >
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <span className="text-sm font-medium uppercase text-brand-600 dark:text-brand-500">
+        <span className={`rounded-full px-2.5 py-0.5 text-xs font-medium uppercase ${EVENT_CATEGORY_ACCENT[event.category].badge}`}>
           {EVENT_CATEGORY_LABELS[event.category]}
         </span>
         {full && (
@@ -68,28 +70,28 @@ export default function EventsPage() {
       <NavBar />
       <main className="mx-auto max-w-2xl px-4 py-6 pb-20 sm:pb-6">
         <div className="flex items-center justify-between">
-          <h1 className="text-lg font-semibold">Events</h1>
+          <h1 className="text-xl font-bold">Events</h1>
           <Link
             href="/events/new"
-            className="rounded-md bg-brand-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-brand-700"
+            className="rounded-lg bg-brand-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-brand-700"
           >
             + New event
           </Link>
         </div>
         <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
-          Cricket matches, hangouts, study groups — anything happening that others can join.
+          Cricket matches, hangouts, NPTEL exams, study groups — anything happening that others can join.
         </p>
 
         {loading && <LoadingScreen />}
 
         {!loading && events.length === 0 && (
-          <p className="mt-4 text-gray-500 dark:text-gray-400">
+          <EmptyState>
             No events yet.{" "}
             <Link href="/events/new" className="text-brand-600 underline dark:text-brand-500">
               List one
             </Link>
             .
-          </p>
+          </EmptyState>
         )}
 
         {!loading && events.length > 0 && (

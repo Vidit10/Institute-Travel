@@ -1,6 +1,5 @@
 "use client";
 
-import Link from "next/link";
 import IDCardViewer from "@/components/IDCardViewer";
 
 const LINK_CLASS =
@@ -26,26 +25,14 @@ function OutingIcon() {
   );
 }
 
-function EventIcon() {
-  return (
-    <svg width="20" height="20" viewBox="0 0 20 20" fill="none" aria-hidden>
-      <rect x="3" y="4" width="14" height="12.5" rx="1.5" stroke="currentColor" strokeWidth="1.5" />
-      <path d="M3 7.5h14M6.5 2.5v3M13.5 2.5v3" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
-      <circle cx="7" cy="11" r="1" fill="currentColor" />
-      <circle cx="10" cy="11" r="1" fill="currentColor" />
-      <circle cx="13" cy="11" r="1" fill="currentColor" />
-    </svg>
-  );
-}
-
-// Frequent off-app actions (and, since Events was otherwise buried two taps
-// deep in the Account menu on mobile, one in-app shortcut too) students need
-// alongside the ride-sharing flow — kept as a compact row rather than folded
-// into the bottom tab bar, which is reserved for the app's own 5 core
-// sections.
+// Frequent off-app/support actions — bus tracking, the outing-registration
+// portal, and a locally-stored ID for security checks. Events deliberately
+// does NOT live here: it's a full content type (its own create/RSVP/detail
+// flow, a peer to Trips/Recommendations), not a utility link, so it gets its
+// own home-page section (UpcomingEvents) instead of a tile in this row.
 export default function QuickActions() {
   return (
-    <div className="mt-4 grid grid-cols-4 gap-2">
+    <div className="mt-4 grid grid-cols-3 gap-2">
       <a
         href="https://peg-iitdh.github.io/EDL2025-GPSTracker/HTML/Bus_Tracking.html"
         target="_blank"
@@ -60,10 +47,6 @@ export default function QuickActions() {
         SAM portal
       </a>
       <IDCardViewer trigger="card" />
-      <Link href="/events" className={LINK_CLASS}>
-        <EventIcon />
-        Events
-      </Link>
     </div>
   );
 }

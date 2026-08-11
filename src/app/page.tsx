@@ -6,10 +6,12 @@ import { useSession } from "next-auth/react";
 import NavBar from "@/components/NavBar";
 import PushSubscribe from "@/components/PushSubscribe";
 import LoadingScreen from "@/components/LoadingScreen";
+import EmptyState from "@/components/EmptyState";
 import { type ArrivalEntry } from "@/components/ArrivalForm";
 import PostTripReviewPrompt from "@/components/PostTripReviewPrompt";
 import InviteFriendsPrompt from "@/components/InviteFriendsPrompt";
 import QuickActions from "@/components/QuickActions";
+import UpcomingEvents from "@/components/UpcomingEvents";
 import ArrivalsTabs from "@/components/ArrivalsTabs";
 import {
   PICKUP_LOCATIONS,
@@ -72,9 +74,6 @@ type Trip = {
 function pad(n: number) {
   return String(n).padStart(2, "0");
 }
-function toDateInputValue(date: Date) {
-  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
-}
 function buildDate(dateStr: string, hour: number, minute: number, ampm: "AM" | "PM") {
   if (!dateStr) return null;
   const [y, m, d] = dateStr.split("-").map(Number);
@@ -93,7 +92,7 @@ function TripCard({ trip }: { trip: Trip }) {
   return (
     <Link
       href={`/trips/${trip._id}`}
-      className="block rounded-lg border border-gray-200 bg-white p-4 hover:border-brand-300 dark:border-gray-800 dark:bg-gray-900 dark:hover:border-brand-700"
+      className="block rounded-xl border border-gray-200 bg-white p-4 shadow-sm transition-shadow hover:border-brand-300 hover:shadow-md dark:border-gray-800 dark:bg-gray-900 dark:hover:border-brand-700"
     >
       <div className="flex flex-wrap items-center justify-between gap-2">
         <span className="text-sm font-medium uppercase text-brand-600 dark:text-brand-500">
@@ -277,12 +276,14 @@ export default function HomePage() {
       <InviteFriendsPrompt enabled={reviewPromptResolved && !reviewPromptShowing} />
       <NavBar />
       <main className="mx-auto max-w-2xl px-4 py-6 pb-20 sm:pb-6">
-        <h1 className="text-lg font-semibold">
+        <h1 className="text-xl font-bold">
           {firstName ? `Hi ${firstName}, ` : ""}
           {tagline}
         </h1>
 
         <QuickActions />
+
+        <UpcomingEvents />
 
         <ArrivalsTabs
           isFemale={isFemale}
@@ -291,15 +292,6 @@ export default function HomePage() {
           onPosted={handleArrivalPosted}
           onWithdrawn={handleArrivalPosted}
         />
-
-        <div className="mt-3">
-          <Link
-            href="/trips/new?listingType=local"
-            className="flex items-center justify-center rounded-lg border border-brand-600 px-4 py-2.5 text-sm font-medium text-brand-600 hover:bg-brand-50 dark:border-brand-500 dark:text-brand-500 dark:hover:bg-brand-950"
-          >
-            Already booked a vehicle? List it →
-          </Link>
-        </div>
 
         <hr className="mt-6 border-gray-200 dark:border-gray-800" />
 
@@ -432,13 +424,13 @@ export default function HomePage() {
         {loading && <LoadingScreen />}
 
         {!loading && !isFiltered && trips.length === 0 && (
-          <p className="mt-4 text-gray-500 dark:text-gray-400">
+          <EmptyState>
             No open trips yet. Be the first to{" "}
             <Link href="/trips/new" className="text-brand-600 underline dark:text-brand-500">
               list one
             </Link>
             .
-          </p>
+          </EmptyState>
         )}
 
         {!loading && !isFiltered && (
@@ -458,7 +450,7 @@ export default function HomePage() {
         {!loading && isFiltered && exact === null && nearby === null && (
           <>
             {trips.length === 0 && (
-              <p className="mt-4 text-gray-500 dark:text-gray-400">No matching trips found.</p>
+              <EmptyState>No matching trips found.</EmptyState>
             )}
             <ul className="mt-4 space-y-3">
               {trips.map((trip) => (
@@ -471,7 +463,7 @@ export default function HomePage() {
         {!loading && isFiltered && (exact !== null || nearby !== null) && (
           <>
             {(exact?.length || 0) === 0 && (nearby?.length || 0) === 0 && (
-              <p className="mt-4 text-gray-500 dark:text-gray-400">No matching trips found.</p>
+              <EmptyState>No matching trips found.</EmptyState>
             )}
             {exact && exact.length > 0 && (
               <div className="mt-4">

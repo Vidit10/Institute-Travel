@@ -24,6 +24,8 @@ scope and what's explicitly deferred.
   - `TripReview` — a post-trip check-in, one per `{tripId, userId}` (see the post-trip
     reviews bullet below)
   - `Recommendation` — a restaurant/place-to-visit board entry, no relation to Trip/ArrivalIntent
+  - `RecommendationVote` / `RecommendationEditSuggestion` — one vote and one pending-edit-
+    proposal per person per recommendation, respectively (see the Recommendations bullet below)
   - `Event` / `EventRSVP` — a generic "list a happening, others RSVP" activity, no relation to
     Trip (see the Events bullet below)
   - `PushSubscription` — web-push endpoints per user
@@ -92,7 +94,14 @@ scope and what's explicitly deferred.
   before — only the number of simultaneously-mounted boards changed, from three stacked to
   one at a time). Don't duplicate browsing/posting logic in a new page or component instead of
   adding a prop to `ArrivalsBoard`/`ArrivalsTabs`. `ArrivalForm` is the shared post form used
-  inside every `ArrivalsBoard` instance — extend it, don't fork it.
+  inside every `ArrivalsBoard` instance — extend it, don't fork it. `ArrivalForm` takes
+  `listingType`/`direction` as **required, fixed props**, not user-editable form fields — it
+  used to have its own "Trip type"/"Direction" selectors that could disagree with the section
+  it was mounted in, letting a post silently land in a combo the section it was opened from
+  couldn't show (removed; don't re-add them without fixing that). `ArrivalsTabs` also owns the
+  "Already booked a vehicle? List it →" link below the tabs — its target depends on the active
+  tab, and for the long-distance tab, on `ArrivalsBoard`'s `onDirectionChange` callback (the
+  only way that board's internal direction-toggle state reaches its parent).
 - **Quick actions & ID card** (`src/components/QuickActions.tsx`,
   `src/components/IDCardViewer.tsx`, `src/lib/idCardStore.ts`): a home-page row of secondary
   off-app links (bus tracker, SAM portal — both plain `target="_blank"` links, no
@@ -126,8 +135,16 @@ scope and what's explicitly deferred.
   never stack; the review prompt always gets first refusal. If you add a third home-page
   popup, extend that same coordination rather than letting popups race independently.
 - **Recommendations** (`src/models/Recommendation.ts`, `src/app/api/recommendations/`,
-  `src/app/recommendations/`): intentionally the simplest surface in the app — no
-  visibility rules, no relation to any other model. Reachable only from the Account menu.
+  `src/app/recommendations/`): no visibility rules beyond the moderation-queue status. Two
+  additive extensions, both still no relation to Trip/Event: **voting**
+  (`RecommendationVote.ts`, `src/lib/recommendationVoting.ts` — `castVote()`/`scoresFor()`,
+  toggle-off-on-same-value logic, covered by `tests/recommendationVoting.test.ts`) and
+  **suggested edits** (`RecommendationEditSuggestion.ts`,
+  `src/lib/recommendationEditSuggestions.ts` — `approveEditSuggestion()`, also covered by that
+  test file). The field-editing UI (category-conditional inputs) is shared across the public
+  create form, the public suggest-edit form, and both admin review cards via
+  `src/components/RecommendationFields.tsx` — extend that one component, don't fork the field
+  set a third time.
 - **Feedback categories** (`src/models/Feedback.ts`, `src/app/api/feedback/route.ts`,
   `src/app/feedback/page.tsx`): a fixed enum kept in sync across all three files — there's no
   resolve/dismiss action yet, so every category (including `profile_correction`, see
@@ -142,6 +159,18 @@ scope and what's explicitly deferred.
   concurrency. Don't add a moderation queue or phone-number reveal to this without a real
   reason — both were deliberately left out (see SPEC.md's Events section for why). The
   existing expire-requests cron also completes past events; don't add a second cron for this.
+  On the home page, `src/components/UpcomingEvents.tsx` renders its own compact preview — it
+  is deliberately **not** part of `QuickActions.tsx`'s row (bus tracker/SAM/ID card), since
+  those are utility links and Events is a full content type; don't fold it back into that
+  component. `src/components/NavBar.tsx`'s desktop header also links directly to `/events`.
+- **Help** (`src/app/help/page.tsx`, `src/lib/helpTopics.ts`, `src/components/HelpButton.tsx`):
+  a static, always-current feature explainer, replacing the onboarding intro
+  (`src/app/onboarding/page.tsx`) as the real "what does this app do" source of truth, since
+  that intro is only ever shown once. **Add a short section here in the same PR as any new
+  user-facing feature** — a heading, 1–2 sentences, one link, following the existing entries'
+  shape — and add its route prefix to `HELP_TOPICS` in `helpTopics.ts` so the "?" button's
+  context-aware jump (`/help#<topic>`) keeps working. Keep entries brief; this page's value is
+  in staying skimmable, not in being complete.
 
 ## Local setup
 
@@ -171,6 +200,17 @@ npm run dev
 - Keep girls-only and consent-gating logic server-side (in the API route), never
   client-only — the client UI hiding something is not the same as the API refusing to
   return it.
+- **Visual design tokens** (established during a 2026-08 polish pass, not enforced by tooling
+  — follow by convention): cards/sections use `rounded-xl`; buttons/inputs use `rounded-lg`;
+  pills/badges/avatars use `rounded-full`. A page's primary `<h1>` is `text-xl font-bold`;
+  section labels stay `text-xs uppercase font-semibold`. Clickable cards get
+  `shadow-sm hover:shadow-md transition-shadow` alongside the existing `hover:border-brand-*`.
+  Custom inline SVG icons use `strokeWidth="1.5"` unless there's a specific reason not to (the
+  bottom-tab-bar "+" FAB icon uses `2` deliberately, for visual weight). Empty states use the
+  shared `src/components/EmptyState.tsx` rather than a bare paragraph. Category badges/icons
+  for Recommendations and Events use the curated accent palette in
+  `src/lib/categoryColors.ts` (additive — the `brand` blue stays the one primary/action
+  color everywhere else; don't introduce another accent family without reason).
 
 ## Sending a PR
 

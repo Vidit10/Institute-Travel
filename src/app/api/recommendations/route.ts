@@ -7,6 +7,7 @@ import { track } from "@/lib/analytics";
 import { rateLimitOrRespond } from "@/lib/rateLimit";
 import { isAdminEmail } from "@/lib/admin";
 import { recommendationFieldsSchema } from "@/lib/recommendationValidation";
+import { scoresFor } from "@/lib/recommendationVoting";
 
 // GET: every *approved* recommendation, newest first — same login-gate as the
 // rest of the app, no other visibility rules beyond moderation status (unlike
@@ -20,19 +21,26 @@ export async function GET() {
   }
 
   await dbConnect();
-  const recommendationDocs = await Recommendation.find({ status: "approved" })
+  const recommendationDocs = (await Recommendation.find({ status: "approved" })
     .sort({ createdAt: -1 })
     .populate("userId", "name email")
-    .lean();
+    .lean()) as unknown as Array<{ _id: { toString(): string }; userId?: unknown; [key: string]: unknown }>;
+
+  const scores = await scoresFor(
+    recommendationDocs.map((r) => r._id.toString()),
+    session.user.id
+  );
 
   // Admin-authored posts show as "Admin" on the public board — the real name
   // never reaches the client, not just hidden client-side.
   const recommendations = recommendationDocs.map((r) => {
     const user = r.userId as unknown as { name?: string; email?: string } | undefined;
+    const { score, myVote } = scores.get(r._id.toString()) || { score: 0, myVote: null };
+    const withVotes = { ...r, score, myVote };
     if (user && isAdminEmail(user.email)) {
-      return { ...r, userId: { ...user, name: "Admin" } };
+      return { ...withVotes, userId: { ...user, name: "Admin" } };
     }
-    return r;
+    return withVotes;
   });
 
   return NextResponse.json({ recommendations });

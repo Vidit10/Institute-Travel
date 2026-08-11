@@ -84,11 +84,11 @@ export default function TripReviewPage() {
     <>
       <NavBar />
       <main className="mx-auto max-w-md px-4 py-6 pb-20 sm:pb-6">
-        <h1 className="text-lg font-semibold">How did your trip go?</h1>
+        <h1 className="text-xl font-bold">How did your trip go?</h1>
 
         {ineligible && (
           <p className="mt-4 rounded-lg bg-gray-100 px-4 py-3 text-sm text-gray-600 dark:bg-gray-800 dark:text-gray-300">
-            This review link isn't available for your account — it's only for people who
+            This review link isn&apos;t available for your account — it&apos;s only for people who
             hosted or were accepted onto this trip.
           </p>
         )}
@@ -96,7 +96,7 @@ export default function TripReviewPage() {
         {!ineligible && (alreadySubmitted || submitted) && (
           <div className="mt-4 space-y-3">
             <p className="rounded-lg bg-brand-50 px-4 py-3 text-sm text-brand-700 dark:bg-brand-950 dark:text-brand-400">
-              Thanks so much — we've already got your review for this trip. Really appreciate
+              Thanks so much — we&apos;ve already got your review for this trip. Really appreciate
               you taking the time.
             </p>
             <button

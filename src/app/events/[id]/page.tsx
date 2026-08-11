@@ -6,6 +6,7 @@ import Link from "next/link";
 import NavBar from "@/components/NavBar";
 import LoadingScreen from "@/components/LoadingScreen";
 import { EVENT_CATEGORIES, EVENT_CATEGORY_LABELS, YEAR_LABELS, PROGRAM_LABELS } from "@/lib/constants";
+import { EVENT_CATEGORY_ACCENT } from "@/lib/categoryColors";
 
 type EventDetail = {
   _id: string;
@@ -128,10 +129,10 @@ export default function EventDetailPage() {
     <>
       <NavBar />
       <main className="mx-auto max-w-2xl px-4 py-6 pb-20 sm:pb-6">
-        <span className="text-sm font-medium uppercase text-brand-600 dark:text-brand-500">
+        <span className={`inline-block rounded-full px-2.5 py-0.5 text-xs font-medium uppercase ${EVENT_CATEGORY_ACCENT[event.category].badge}`}>
           {EVENT_CATEGORY_LABELS[event.category]}
         </span>
-        <h1 className="mt-1 text-lg font-semibold">{event.title}</h1>
+        <h1 className="mt-1 text-xl font-bold">{event.title}</h1>
         {event.status === "cancelled" && (
           <p className="mt-1 text-sm font-medium text-red-600 dark:text-red-400">Cancelled</p>
         )}
@@ -189,7 +190,7 @@ export default function EventDetailPage() {
 
         {!isHost && myRsvp && !closed && (
           <div className="mt-4 flex items-center gap-3">
-            <p className="text-sm text-brand-600 dark:text-brand-500">You're going ({myRsvp.partySize} {myRsvp.partySize === 1 ? "person" : "people"}).</p>
+            <p className="text-sm text-brand-600 dark:text-brand-500">You&apos;re going ({myRsvp.partySize} {myRsvp.partySize === 1 ? "person" : "people"}).</p>
             <button
               type="button"
               onClick={leave}
@@ -216,7 +217,7 @@ export default function EventDetailPage() {
           Going ({rsvps.reduce((sum, r) => sum + r.partySize, 0)})
         </h2>
         {rsvps.length === 0 ? (
-          <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">No one's RSVP'd yet.</p>
+          <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">No one&apos;s RSVP&apos;d yet.</p>
         ) : (
           <ul className="mt-2 space-y-2">
             {rsvps.map((r) => (

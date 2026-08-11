@@ -104,9 +104,14 @@ export default function AdminPage() {
   const [pendingRecommendations, setPendingRecommendations] = useState<number | null>(null);
 
   useEffect(() => {
-    fetch("/api/admin/recommendations")
-      .then((r) => (r.ok ? r.json() : null))
-      .then((data) => setPendingRecommendations(data?.recommendations?.length ?? null))
+    Promise.all([
+      fetch("/api/admin/recommendations").then((r) => (r.ok ? r.json() : null)),
+      fetch("/api/admin/recommendations/edit-suggestions").then((r) => (r.ok ? r.json() : null)),
+    ])
+      .then(([recData, suggData]) => {
+        const count = (recData?.recommendations?.length ?? 0) + (suggData?.suggestions?.length ?? 0);
+        setPendingRecommendations(count);
+      })
       .catch(() => {});
   }, []);
 
@@ -149,7 +154,7 @@ export default function AdminPage() {
 
       <main className="mx-auto max-w-5xl px-4 py-6">
         <div className="flex items-center justify-between">
-          <h1 className="text-lg font-semibold">Dashboard</h1>
+          <h1 className="text-xl font-bold">Dashboard</h1>
           <button
             onClick={load}
             disabled={loading}
@@ -300,7 +305,7 @@ export default function AdminPage() {
             <Section title={`Post-trip reviews (${metrics.tripReviews.total})`}>
               <p className="text-xs text-gray-500 dark:text-gray-400">
                 Self-reported, sent after a trip completes — a small-sample complement to the
-                modeled "Est. money saved" tile above, not a replacement for it.
+                modeled &ldquo;Est. money saved&rdquo; tile above, not a replacement for it.
               </p>
               {metrics.tripReviews.total === 0 ? (
                 <p className="mt-3 text-sm text-gray-500 dark:text-gray-400">No reviews yet.</p>

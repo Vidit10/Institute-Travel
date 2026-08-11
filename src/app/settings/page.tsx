@@ -72,7 +72,7 @@ export default function SettingsPage() {
     <>
       <NavBar />
       <main className="mx-auto max-w-md px-4 py-6 pb-20 sm:pb-6">
-        <h1 className="text-lg font-semibold">Your profile</h1>
+        <h1 className="text-xl font-bold">Your profile</h1>
         <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
           {form.name} · {YEAR_LABELS[form.year] ?? form.year} · {PROGRAM_LABELS[form.program as keyof typeof PROGRAM_LABELS] ?? form.program}
         </p>

@@ -78,6 +78,10 @@ function OnboardingForm() {
           if the host doesn&apos;t respond in time, it auto-expires and you&apos;re free to look
           elsewhere.
         </p>
+        <p className="mt-3 text-sm text-gray-600 dark:text-gray-300">
+          This screen only shows up once, but there&apos;s more than rides here now — you can
+          always find a quick rundown of every feature from the <strong>?</strong> button up top.
+        </p>
         <button
           onClick={() => setShowIntro(false)}
           className="mt-6 w-full rounded-lg bg-brand-600 px-4 py-3 font-medium text-white hover:bg-brand-700"

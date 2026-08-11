@@ -201,7 +201,10 @@ this — it's just how many instances are mounted simultaneously.
   Posting again, even at a different location, replaces the existing entry rather than
   adding a second.
 - Fields: pickup location, date/time, mode (optional, long-distance only), girls-only
-  (female users only).
+  (female users only). **Trip type and direction are not fields in the post form** — they're
+  fixed by whichever section you opened the form from (a leftover "Trip type"/"Direction"
+  selector inside the form used to let you post into a mismatched combo, silently creating an
+  entry that wouldn't show up in the section you were looking at; removed).
 - **Browsing is the default view, posting is behind a button** — each section leads with
   who's already posted, not a form; "Post my status" reveals `ArrivalForm` inline. The two
   local sections' overview always collapses to a single whole-route bucket (route-based
@@ -230,14 +233,24 @@ this — it's just how many instances are mounted simultaneously.
 ## 12. Home page & navigation
 
 - **Home page**: a personalized greeting, then a **quick actions row** (§23 — bus tracker,
-  SAM portal, ID card; small/secondary, not the page's main content), then the arrivals board
+  SAM portal, ID card; small/secondary, not the page's main content), then an **Events
+  preview** (§24 — `src/components/UpcomingEvents.tsx`: up to 3 soonest-upcoming events, "+
+  New" and "See all" links). Events is deliberately **not** in the quick actions row despite
+  looking similarly compact — it's a full content type (its own create/RSVP/detail flow, a
+  peer to Trips/Recommendations), not a utility link, so it gets its own section rather than a
+  tile alongside external links. Then the arrivals board
   as a 3-way tab switcher ahead of everything else — "Are you outside right now?" (local,
   to-campus), "Heading out?" (local, from-campus), and "Going home or coming back?"
   (long-distance, with its own to-campus/from-campus toggle — kept as a separate tab rather
   than folded into the local toggle, since it's a different-enough use case — once/twice a
   semester, its own location list — that merging it back in would recreate the clutter the
   split was meant to fix; see §11), plus a "Already booked a vehicle? List it →" button below
-  the tabs. Below a divider, the full open-trips feed is shown by default under a "Browse all
+  the tabs. That button's destination tracks whichever tab (and, for the long-distance tab,
+  whichever direction toggle) is currently active — "Outside now"/"Heading out" always link to
+  a local trip in that section's fixed direction, "Going home or coming back?" links to a
+  long-distance trip in whichever direction is currently selected there, so the button always
+  means "list the trip I'm looking at," not just "list a local trip" regardless of context.
+  Below a divider, the full open-trips feed is shown by default under a "Browse all
   trips" heading, with a time/location search collapsed behind a toggle rather than always
   visible. This structure (quick actions → primary arrivals/list action → de-emphasized
   browse-everything feed) replaced an earlier version that stacked all three arrivals sections
@@ -246,10 +259,12 @@ this — it's just how many instances are mounted simultaneously.
   center "List a trip" action, My Rides, Account. (Arrivals no longer has a tab — it's not a
   standalone page anymore, see §11 — and Recommendations, previously reachable only via the
   Account menu, took the freed slot.)
-- **Desktop/tablet**: a simplified top nav — brand, one primary "List a trip" CTA,
-  notification bell, theme toggle, Account. Low-frequency actions (including
-  Recommendations) live inside the Account item, shared between both nav layouts via one
-  component so they can't drift apart.
+- **Desktop/tablet**: a simplified top nav — brand, two header links (Recommendations,
+  Events — currently standing in for what was originally a single "List a trip" CTA slot;
+  see `memory/decisions-log.md` for why and note this is explicitly a "for now" state, not a
+  final call on desktop nav structure), notification bell, theme toggle, Account. Other
+  low-frequency actions still live inside the Account item, shared between both nav layouts
+  via one component so they can't drift apart.
 - **My Rides**: `/trips/mine` (hosting) and `/trips/requested` (requested) are presented as
   one "My Rides" concept via a shared tab-link component, even though they remain separate
   routes.
@@ -356,6 +371,29 @@ still reached via the Account menu, same as before.
 - **Reporting**: the existing Feedback "report" category (§14) covers recommendations too —
   relabeled "Report a trip, user, or recommendation" rather than adding a fourth separate
   category, since the underlying context-label mechanism already works for any content type.
+- **Upvote/downvote** (`src/models/RecommendationVote.ts`, `src/lib/recommendationVoting.ts`):
+  one vote per person per post — casting the same value again un-votes, casting the opposite
+  value switches it, so `RecommendationVote` only ever holds a person's current single vote,
+  never a history. `GET /api/recommendations` attaches each post's net score and the viewer's
+  own vote in one extra query (small dataset, no aggregation pipeline needed). Voting doesn't
+  change the board's sort order — posts stay newest-first within category; this ships the
+  visible signal without also changing how the board is organized.
+- **Suggested edits, open to any user, admin-gated** (`src/models/
+  RecommendationEditSuggestion.ts`, `src/lib/recommendationEditSuggestions.ts`,
+  `/api/recommendations/[id]/suggest-edit`, `/api/admin/recommendations/edit-suggestions*`):
+  anyone — not just the original poster — can propose a change to an already-approved post,
+  using the same `recommendationFieldsSchema` the create form uses. **The live post is never
+  touched while a suggestion is pending** — a suggestion is a separate proposal, only applied
+  to the live `Recommendation` at the moment an admin approves it (`approveEditSuggestion()`,
+  which never changes the post's own `status`, since it was never taken down). This was a
+  deliberate call: letting a submitted-but-unreviewed suggestion hide someone else's approved
+  post would let any user take content off the board just by proposing garbage, which
+  contradicts this app's low-friction-moderation posture everywhere else (rejecting a new
+  submission is a silent no-op elsewhere; reporting doesn't take content down either). One
+  pending suggestion per person per post at a time (partial-unique index, same pattern as
+  `JoinRequest`). Reviewed at `/admin/recommendations`, second section alongside new
+  submissions, with a quick before/after diff summary; the same pending-count banner on
+  `/admin` counts both queues together.
 
 ## 18. Invite-friends nudge
 
@@ -494,9 +532,14 @@ reserved for the app's 5 core sections (§12).
 A generalization of the underlying "list something, others join it" idea beyond rides — e.g.
 listing a cricket match. Deliberately a **separate model from Trip**, not a generalization of
 it: Trip's fare/vehicle/seat-concurrency and girls-only machinery is ride-specific and doesn't
-fit a generic activity. Reachable from the Account menu (`/events`), same starting point
-Recommendations had before it was promoted to a bottom-tab slot — no bottom-tab-bar changes in
-this pass.
+fit a generic activity (`/events`). Originally shipped Account-menu-only, same starting point
+Recommendations had before its own promotion — since revised: an
+`UpcomingEvents` preview now sits directly on the home page (§12), and desktop's top nav has
+a dedicated "Events" link (§12), because Events turned out to need more visibility than a
+utility link gets — it's a full content type, not a support action, and grouping it with
+Bus tracker/SAM portal/My ID in the quick actions row (§23) undersold it. Still no
+bottom-tab-bar slot (mobile discovery is the home-page preview instead) and still also in the
+Account menu for both surfaces.
 
 - **Open RSVP, no host approval** — unlike Trip's request/accept flow, joining an event is
   immediate. There's no `JoinRequest`-style pending state; `EventRSVP` existence *is* "going,"
@@ -536,3 +579,26 @@ this pass.
 - **Explicitly not built (deferred, not forgotten)**: pre-publish moderation, editing an event
   after creation (cancel-and-relist is the precedent, same as Trip), and any bottom-tab-bar
   placement beyond the Account menu link.
+
+## 25. Help
+
+A persistent, always-revisitable feature explainer (`/help`,
+`src/app/help/page.tsx`) — reached via a small "?" icon in `NavBar.tsx`, present on both the
+desktop header and the mobile slim header (`src/components/HelpButton.tsx`). It exists because
+the onboarding intro screen (`src/app/onboarding/page.tsx`'s `showIntro` block) is only ever
+shown once at signup and structurally can't stay current as features get added — Help is now
+the actual source of truth for "what does this app do," and onboarding's intro just points to
+it (one added sentence) rather than trying to duplicate it.
+
+- **Context-aware**: clicking "?" from a given page jumps straight to that page's section
+  (`/help#<topic>`) instead of always landing at the top of the list —
+  `src/lib/helpTopics.ts`'s `helpTopicForPath()` maps the current route to a section id.
+  Unmatched routes (e.g. `/admin/*`) fall back to plain `/help`.
+- **Deliberately short**: one section per feature, each a heading + 1–2 sentences + a single
+  "Open X →" link — not exhaustive (skips minor chrome like the theme toggle), not a guided
+  tour, just enough to know whether to click through. **Keep it this short** when adding a
+  section for a new feature — this page's entire value is staying skimmable.
+- **Stays behind the login gate**, same as every other route — no middleware exception. A
+  student needs to sign in before reading it, same as before reaching any other page.
+- **Update this page in the same PR as any new feature**, the same convention this file and
+  CONTRIBUTING.md already follow — an out-of-date Help page defeats its own purpose.

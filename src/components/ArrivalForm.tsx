@@ -7,15 +7,9 @@ import {
   CITY_LOCATIONS,
   TRIP_MODES,
   DIRECTIONS,
-  DIRECTION_LABELS,
   LISTING_TYPES,
   resolveTripCombo,
 } from "@/lib/constants";
-
-const LISTING_TYPE_LABELS: Record<(typeof LISTING_TYPES)[number], string> = {
-  "long-distance": "Long-distance (train/flight/bus)",
-  local: "Local, around the city",
-};
 
 // Which location list the anchor field draws from for a given combo — mirrors
 // the pairing used by the Trip creation form (src/app/trips/new/page.tsx).
@@ -70,38 +64,35 @@ export type ArrivalEntry = {
   girlsOnly?: boolean;
 };
 
-// Shared between the home page (compact, "log your arrival now") and
-// /arrivals (full board) — one place for the field set and submit logic so
-// the two surfaces can't drift apart. No partySize field (dropped per
-// product decision — the arrivals board no longer collects a headcount).
+// Shared by every ArrivalsBoard section. listingType/direction are fixed by
+// whichever section mounted this form (not user-editable here) — the section
+// you're posting from IS the trip type, so a second selector inside the form
+// that could disagree with it would let a post silently land in a section
+// other than the one you opened it from (previously possible when this form
+// had its own Trip type/Direction controls; removed for that reason).
 export default function ArrivalForm({
+  listingType,
+  direction,
   initialEntry,
   isFemale,
   defaultGirlsOnly,
-  defaultDirection = "to-campus",
-  defaultListingType = "long-distance",
   submitLabel = "Post my arrival",
   onSuccess,
 }: {
+  listingType: (typeof LISTING_TYPES)[number];
+  direction: (typeof DIRECTIONS)[number];
   initialEntry?: ArrivalEntry;
   isFemale: boolean;
   defaultGirlsOnly?: boolean;
-  defaultDirection?: (typeof DIRECTIONS)[number];
-  defaultListingType?: (typeof LISTING_TYPES)[number];
   submitLabel?: string;
   onSuccess: (entry: ArrivalEntry) => void;
 }) {
   const initialDate = initialEntry ? new Date(initialEntry.arrivalTime) : null;
   const initialHour24 = initialDate?.getHours() ?? 9;
-  const initialDirection = initialEntry?.direction || defaultDirection;
-  const initialListingType = initialEntry?.listingType || defaultListingType;
-  const initialTime = defaultTime(initialListingType, initialDirection);
+  const initialTime = defaultTime(listingType, direction);
 
   const [form, setForm] = useState({
-    direction: initialDirection,
-    listingType: initialListingType,
-    pickupLocation:
-      initialEntry?.pickupLocation || pickupOptions(initialListingType, initialDirection)[0],
+    pickupLocation: initialEntry?.pickupLocation || pickupOptions(listingType, direction)[0],
     pickupOther: "",
     mode: initialEntry?.mode || "",
     trainNumber: initialEntry?.trainNumber || "",
@@ -115,22 +106,8 @@ export default function ArrivalForm({
   const [error, setError] = useState<string | null>(null);
   const [posting, setPosting] = useState(false);
 
-  const options = pickupOptions(form.listingType, form.direction);
+  const options = pickupOptions(listingType, direction);
   const effectivePickup = form.pickupLocation === "Others" ? form.pickupOther.trim() : form.pickupLocation;
-
-  function updateTripType(listingType: (typeof LISTING_TYPES)[number], direction: (typeof DIRECTIONS)[number]) {
-    const { hour, ampm } = defaultTime(listingType, direction);
-    setForm((f) => ({
-      ...f,
-      listingType,
-      direction,
-      pickupLocation: pickupOptions(listingType, direction)[0],
-      pickupOther: "",
-      hour,
-      minute: 0,
-      ampm,
-    }));
-  }
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
@@ -155,8 +132,8 @@ export default function ArrivalForm({
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         pickupLocation: effectivePickup,
-        direction: form.direction,
-        listingType: form.listingType,
+        direction,
+        listingType,
         arrivalTime: date.toISOString(),
         mode: form.mode || undefined,
         trainNumber: form.mode === "train" ? form.trainNumber || undefined : undefined,
@@ -177,40 +154,8 @@ export default function ArrivalForm({
   return (
     <form onSubmit={submit} className="space-y-3">
       <div>
-        <label className="block text-sm font-medium">Trip type</label>
-        <select
-          className="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 dark:border-gray-700 dark:bg-gray-900"
-          value={form.listingType}
-          onChange={(e) => updateTripType(e.target.value as (typeof LISTING_TYPES)[number], form.direction)}
-        >
-          {LISTING_TYPES.map((lt) => (
-            <option key={lt} value={lt}>{LISTING_TYPE_LABELS[lt]}</option>
-          ))}
-        </select>
-      </div>
-      <div>
-        <label className="block text-sm font-medium">Direction</label>
-        <div className="mt-1 grid grid-cols-2 gap-2">
-          {DIRECTIONS.map((d) => (
-            <button
-              key={d}
-              type="button"
-              onClick={() => updateTripType(form.listingType, d)}
-              className={`rounded-md border px-3 py-2 text-sm ${
-                form.direction === d
-                  ? "border-brand-600 bg-brand-50 text-brand-700 dark:border-brand-500 dark:bg-brand-950 dark:text-brand-400"
-                  : "border-gray-300 dark:border-gray-700"
-              }`}
-            >
-              {DIRECTION_LABELS[d]}
-            </button>
-          ))}
-        </div>
-      </div>
-
-      <div>
         <label className="block text-sm font-medium">
-          {form.direction === "to-campus" ? "Pickup location" : "Meeting point"} <span className="text-red-500">*</span>
+          {direction === "to-campus" ? "Pickup location" : "Meeting point"} <span className="text-red-500">*</span>
         </label>
         <select
           className="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 dark:border-gray-700 dark:bg-gray-900"
@@ -232,7 +177,7 @@ export default function ArrivalForm({
         )}
       </div>
 
-      <div className={form.listingType === "local" ? "" : "grid grid-cols-2 gap-3"}>
+      <div className={listingType === "local" ? "" : "grid grid-cols-2 gap-3"}>
         <div>
           <label className="block text-sm font-medium">
             Date <span className="text-red-500">*</span>
@@ -247,7 +192,7 @@ export default function ArrivalForm({
         </div>
         {/* Train/flight mode only makes sense for the long-distance semester-start
             flow — a local campus<->city hop has no such concept. */}
-        {form.listingType !== "local" && (
+        {listingType !== "local" && (
           <div>
             <label className="block text-sm font-medium">Mode (optional)</label>
             <select
@@ -264,7 +209,7 @@ export default function ArrivalForm({
         )}
       </div>
 
-      {form.listingType !== "local" && form.mode === "train" && (
+      {listingType !== "local" && form.mode === "train" && (
         <div>
           <label className="block text-sm font-medium">Train number (optional)</label>
           <input
@@ -274,7 +219,7 @@ export default function ArrivalForm({
           />
         </div>
       )}
-      {form.listingType !== "local" && form.mode === "flight" && (
+      {listingType !== "local" && form.mode === "flight" && (
         <div>
           <label className="block text-sm font-medium">Flight number (optional)</label>
           <input

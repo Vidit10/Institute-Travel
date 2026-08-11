@@ -32,7 +32,7 @@ function formatPerson(e: Entry) {
 
 function EntryCard({ entry, showLocation }: { entry: Entry; showLocation?: boolean }) {
   return (
-    <li className="rounded-lg border border-gray-200 bg-white p-3 text-sm dark:border-gray-800 dark:bg-gray-900">
+    <li className="rounded-xl border border-gray-200 bg-white p-3 text-sm dark:border-gray-800 dark:bg-gray-900">
       <p className="flex flex-wrap items-center gap-2 break-words">
         {formatPerson(entry)}
         {entry.partySize > 1 ? ` (+${entry.partySize - 1})` : ""}
@@ -83,6 +83,7 @@ export default function ArrivalsBoard({
   myEntries,
   onPosted,
   onWithdrawn,
+  onDirectionChange,
 }: {
   listingType: "local" | "long-distance";
   initialDirection: "to-campus" | "from-campus";
@@ -95,8 +96,20 @@ export default function ArrivalsBoard({
   myEntries: ArrivalEntry[];
   onPosted: () => void;
   onWithdrawn: () => void;
+  // Only meaningful when allowDirectionToggle is set — lets a parent (the
+  // "Already booked a vehicle? List it →" link) stay in sync with which
+  // direction is currently toggled inside this board, since that state is
+  // otherwise fully internal.
+  onDirectionChange?: (direction: "to-campus" | "from-campus") => void;
 }) {
-  const [direction, setDirection] = useState(initialDirection);
+  const [direction, setDirectionState] = useState(initialDirection);
+  const setDirection = useCallback(
+    (d: "to-campus" | "from-campus") => {
+      setDirectionState(d);
+      onDirectionChange?.(d);
+    },
+    [onDirectionChange]
+  );
   const [overview, setOverview] = useState<Overview[] | null>(null);
   const [selectedLocation, setSelectedLocation] = useState<string | null>(null);
   const [exact, setExact] = useState<Entry[]>([]);
@@ -166,6 +179,14 @@ export default function ArrivalsBoard({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [direction]);
 
+  // Tell the parent the initial direction too, not just on-toggle changes —
+  // otherwise a parent that only listens for changes never learns the
+  // starting value.
+  useEffect(() => {
+    onDirectionChange?.(initialDirection);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   useEffect(() => {
     if (selectedLocation) loadDetail(selectedLocation);
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -213,7 +234,7 @@ export default function ArrivalsBoard({
   }
 
   return (
-    <section className="mt-3 rounded-lg border border-gray-200 bg-white p-4 dark:border-gray-800 dark:bg-gray-900">
+    <section className="mt-3 rounded-xl border border-gray-200 bg-white p-4 dark:border-gray-800 dark:bg-gray-900">
       <p className="font-medium">{title}</p>
       <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">{blurb}</p>
 
@@ -273,8 +294,8 @@ export default function ArrivalsBoard({
             initialEntry={myEntryHere || undefined}
             isFemale={isFemale}
             defaultGirlsOnly={girlsOnlyDefault}
-            defaultListingType={listingType}
-            defaultDirection={direction}
+            listingType={listingType}
+            direction={direction}
             submitLabel={myEntryHere ? "Update my status" : "Post my status"}
             onSuccess={handlePosted}
           />

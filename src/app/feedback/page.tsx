@@ -67,7 +67,7 @@ function FeedbackForm() {
     <>
       <NavBar />
       <main className="mx-auto max-w-md px-4 py-6 pb-20 sm:pb-6">
-        <h1 className="text-lg font-semibold">Feedback</h1>
+        <h1 className="text-xl font-bold">Feedback</h1>
         <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
           Spotted a bug, have an idea, or need to report something? Let us know.
         </p>
